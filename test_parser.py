@@ -202,6 +202,27 @@ def test_parse_scoped_block_unmatched_brace():
         parse_scoped_block("}")
 
 
+def test_parse_scoped_block_with_vector_operand():
+    text = """
+    {
+      {
+        wgmma.mma_async.sync.aligned.m64n64k16.f16.f16.f16 {%r1, %r2, %r3, %r4}, %rd1, %rd2, p, 1, 1, 1, 1;
+      }
+    }
+    """
+    root = parse_scoped_block(text)
+    inner = root.body[0]
+    assert isinstance(inner, ScopedBlock)
+    nested = inner.body[0]
+    assert isinstance(nested, ScopedBlock)
+    inst = nested.body[0]
+    assert isinstance(inst, Instruction)
+    assert inst.opcode.startswith("wgmma.mma_async")
+    vec = inst.operands[0]
+    assert isinstance(vec, Vector)
+    assert len(vec.values) == 4
+
+
 def test_parse_entry_directive_basic():
     text = """
 .entry foo(

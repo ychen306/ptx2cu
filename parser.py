@@ -381,15 +381,36 @@ def _brace_tokens(lines: list[str]) -> list[str]:
     for raw in lines:
         line = raw.split("//", 1)[0]
         buf: list[str] = []
-        for ch in line:
-            if ch in "{}":
+        i = 0
+        n = len(line)
+        while i < n:
+            ch = line[i]
+            if ch == "{":
+                close = line.find("}", i + 1)
+                if close != -1:
+                    inner = line[i + 1 : close]
+                    # Treat as vector literal if it looks like an operand (contains % but no ';')
+                    if "%" in inner and ";" not in inner:
+                        buf.append(line[i : close + 1])
+                        i = close + 1
+                        continue
                 seg = "".join(buf).strip()
                 if seg:
                     tokens.append(seg)
                 tokens.append(ch)
                 buf.clear()
-            else:
-                buf.append(ch)
+                i += 1
+                continue
+            if ch == "}":
+                seg = "".join(buf).strip()
+                if seg:
+                    tokens.append(seg)
+                tokens.append(ch)
+                buf.clear()
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
         tail = "".join(buf).strip()
         if tail:
             tokens.append(tail)
