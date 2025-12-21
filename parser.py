@@ -142,9 +142,10 @@ def parse_memory_directive(line: str) -> MemoryDecl:
 
 
 def _parse_register(token: str) -> Register:
-    if not token.startswith("%"):
-        raise ValueError(f"Expected register token, got: {token!r}")
-    body = token[1:]
+    if token.startswith("%"):
+        body = token[1:]
+    else:
+        body = token
     m = re.match(r"([A-Za-z_][\w\.]*?)(\d+)?$", body)
     if not m:
         raise ValueError(f"Could not parse register token: {token!r}")
@@ -206,14 +207,13 @@ def _parse_operand(token: str) -> Operand:
             base = ParamRef(name=base_token)
         return MemoryRef(base=base, offset=offset)
 
-    if token.startswith("%"):
-        return _parse_register(token)
-
     if re.match(r"^-?(0x[0-9a-fA-F]+|\d+)$", token):
         return Immediate(value=int(token, 0))
+    if re.match(r"^[0-9a-fA-F]+$", token):
+        return Immediate(value=int(token, 16))
 
-    # Fallback: treat bare symbols as parameter refs (e.g., constants).
-    return ParamRef(name=token)
+    # Fallback: treat as register (supports bare predicate regs like 'p')
+    return _parse_register(token)
 
 
 def parse_instruction(line: str) -> Instruction:
@@ -343,6 +343,9 @@ def _brace_tokens(lines: list[str]) -> list[str]:
 
 def _process_statement(stmt: str, block: ScopedBlock) -> None:
     if not stmt:
+        return
+    if stmt.startswith(".pragma"):
+        # Skip pragmas inside blocks
         return
     label_match = re.match(r"^([^:]+):\s*(.*)$", stmt)
     if label_match:

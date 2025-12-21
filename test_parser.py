@@ -116,6 +116,17 @@ def test_parse_instruction_predicated_and_immediate():
     )
 
 
+def test_parse_instruction_predicate_without_percent():
+    inst = parse_instruction("@p add.s32 %r1, %r2, 4;")
+    assert inst.predicate == Register(prefix="p", idx=None)
+
+
+def test_parse_instruction_hex_immediate_without_prefix():
+    inst = parse_instruction("add.s32 %r1, %r2, 0f00000000;")
+    assert isinstance(inst.operands[2], Immediate)
+    assert inst.operands[2].value == int("0f00000000", 16)
+
+
 def test_parse_instruction_vector_and_mem_offset():
     inst = parse_instruction("st.global.v2.u32 [%rd1+16], {%r2,%r3}")
     assert inst == Instruction(
@@ -303,5 +314,5 @@ def test_parse_instruction_wgmma_vector_operands():
     # Next operands are registers, a param ref, and immediates
     assert inst.operands[1] == Register(prefix="rd", idx=74)
     assert inst.operands[2] == Register(prefix="rd", idx=79)
-    assert inst.operands[3] == ParamRef(name="p")
+    assert inst.operands[3] == Register(prefix="p", idx=None)
     assert [op.value for op in inst.operands[4:]] == [1, 1, 1, 1]
