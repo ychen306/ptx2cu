@@ -24,3 +24,7 @@ class InlineAsm:
     outputs: list[Var]
     constraints: dict[Var, str]
     clobbers_memory: bool = False
+
+
+# Re-export MemoryDecl for convenience
+MemoryDecl = ptx.MemoryDecl
