@@ -1,5 +1,5 @@
 from .types import InlineAsm, RegisterInfo, Var
-from .render import emit_inline_asm, emit_inline_asm_string
+from .render_inst import emit_inline_asm, emit_inline_asm_string
 
 __all__ = [
     "InlineAsm",
