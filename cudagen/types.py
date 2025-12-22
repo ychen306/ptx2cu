@@ -27,6 +27,18 @@ class InlineAsm:
     outputs: list[Var]
     clobbers_memory: bool = False
 
+@dataclass
+class Load:
+    '''
+    Models: dest = src[offset]
+    assuming everything is byte-typed
+    '''
+    bitwidth: int
+    is_float: bool
+    dst: Var
+    src: Var
+    offset: int
+
 
 # Re-export MemoryDecl for convenience
 MemoryDecl = ptx.MemoryDecl

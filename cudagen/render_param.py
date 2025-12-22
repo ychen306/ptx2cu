@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import ptx
 
-from .types import MemoryDecl, RegisterInfo, Var
+from .types import Load, MemoryDecl, RegisterInfo, Var
 
 
 def _ctype_for_datatype(datatype: str) -> str:
@@ -31,6 +31,17 @@ def _ctype_for_datatype(datatype: str) -> str:
     if dt.startswith("f64"):
         return "double"
     return "unsigned int"
+
+
+def _type_info_for_datatype(datatype: str) -> tuple[str, int, bool]:
+    """
+    Return (ctype, bitwidth, is_float) for a PTX datatype string.
+    """
+    ctype = _ctype_for_datatype(datatype)
+    size = _sizeof_datatype(datatype)
+    bitwidth = size * 8
+    is_float = datatype.startswith("f")
+    return ctype, bitwidth, is_float
 
 
 def _sizeof_datatype(datatype: str) -> int:
@@ -67,7 +78,7 @@ def emit_ld_param(
     instr: ptx.Instruction,
     regmap: dict[ptx.Register, RegisterInfo],
     param_map: dict[str, MemoryDecl],
-) -> str:
+) -> Load:
     """
     Emit C code to load a param into a mapped variable using a PTX ld.param instruction.
     """
@@ -90,19 +101,46 @@ def emit_ld_param(
     if decl.memory_type != ptx.MemoryType.Param:
         raise ValueError("emit_ld_param only supports param memory")
 
-    ctype = _ctype_for_datatype(decl.datatype)
+    ctype, bitwidth, is_float = _type_info_for_datatype(decl.datatype)
     size = _sizeof_datatype(decl.datatype)
     offset = src.offset or 0
     if offset % size != 0:
         raise ValueError(f"Offset {offset} not aligned to {size}-byte element")
     index = offset // size
 
-    base_ptr = f"reinterpret_cast<{ctype}*>(&{decl.name})"
-    rhs = f"{base_ptr}[{index}]"
-
     dest_info = regmap.get(dest)
     if dest_info is None:
         raise ValueError(f"Missing mapping for dest register {dest}")
-    lhs = dest_info.c_var.name
+    lhs = dest_info.c_var
 
-    return f"{lhs} = {rhs};"
+    src_var = Var(name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
+
+    return Load(bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset)
+
+
+def emit_load(load: Load) -> str:
+    """
+    Emit C code for a Load IR node as an assignment string.
+    """
+    elem_size = load.bitwidth // 8
+    if load.offset % elem_size != 0:
+        raise ValueError("Unaligned load offset")
+    idx = load.offset // elem_size
+
+    if load.is_float:
+        ctype = "double" if load.bitwidth == 64 else ("float" if load.bitwidth == 32 else "__half")
+    else:
+        if load.bitwidth == 64:
+            ctype = "unsigned long long"
+        elif load.bitwidth == 32:
+            ctype = "unsigned int"
+        elif load.bitwidth == 16:
+            ctype = "unsigned short"
+        elif load.bitwidth == 8:
+            ctype = "unsigned char"
+        else:
+            ctype = "unsigned int"
+
+    base_ptr = f"reinterpret_cast<{ctype}*>(&{load.src.name})"
+    rhs = f"{base_ptr}[{idx}]"
+    return f"{load.dst.name} = {rhs};"
