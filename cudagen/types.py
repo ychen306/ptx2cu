@@ -9,6 +9,9 @@ import ptx
 @dataclass(frozen=True)
 class Var:
     name: str
+    bitwidth: int
+    is_float: bool
+    represents_predicate: bool = False
 
 
 @dataclass
@@ -22,7 +25,6 @@ class InlineAsm:
     template: str
     arguments: list[Var]
     outputs: list[Var]
-    constraints: dict[Var, str]
     clobbers_memory: bool = False
 
 

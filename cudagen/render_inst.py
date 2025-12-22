@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ptx
 
-from .constraints import get_register_constraint
 from .types import InlineAsm, RegisterInfo, Var
 from .utils import collect_registers, render_operand_with_index
 
@@ -30,13 +29,11 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterI
     - InlineAsm.arguments are the Vars in placeholder order; outputs are the Vars for the
       selected output registers (if any).
     """
-    constraints: dict[Var, str] = {}
-
     args: list[Var] = []
     idx = 0
     rendered_ops: list[str] = []
     for op in instr.operands:
-        rendered, idx = render_operand_with_index(op, regmap, constraints, args, idx)
+        rendered, idx = render_operand_with_index(op, regmap, args, idx)
         rendered_ops.append(rendered)
 
     out_regs = get_output_registers(instr)
@@ -54,7 +51,6 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterI
         template=template,
         arguments=args,
         outputs=out_vars,
-        constraints=constraints,
         clobbers_memory=clobbers_memory,
     )
 
@@ -68,64 +64,68 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: dict[ptx.Register, Re
     def escape(s: str) -> str:
         return s.replace("\\", "\\\\").replace('"', '\\"')
 
-    # Map Vars back to declarations
-    var_to_decl = {
-        info.c_var: info.decl
-        for info in regmap.values()
-    }
-    placeholder_for_var = {var: f"%{idx}" for idx, var in enumerate(inline.arguments)}
+    var_to_decl = {info.c_var: info.decl for info in regmap.values()}
+    placeholder_for_var = {var: f"%{idx}" for idx, var in enumerate(inline.arguments + inline.outputs)}
 
     pred_vars = {
         var: decl
         for var, decl in var_to_decl.items()
-        if decl.datatype.startswith("pred")
+        if var.represents_predicate
     }
 
-    pred_temps = {var: f"ptmp{idx}" for idx, var in enumerate(pred_vars)}
-
-    main_template = inline.template
-    # Replace predicate placeholders in main template with temp predicate registers
-    for var, temp in pred_temps.items():
-        ph = placeholder_for_var.get(var)
-        if ph:
-            main_template = main_template.replace(ph, f"%{temp}")
-
+    final_template = inline.template
     pre_lines: list[str] = []
     post_lines: list[str] = []
 
-    if pred_temps:
+    # Only apply predicate bridging if any predicate vars are present
+    if pred_vars:
+        pred_temps = {var: f"ptmp{idx}" for idx, var in enumerate(pred_vars)}
+
+        main_template = inline.template
+        for var, temp in pred_temps.items():
+            ph = placeholder_for_var.get(var)
+            if ph:
+                main_template = main_template.replace(ph, f"%{temp}")
+
         pre_lines.append(".reg .pred " + ", ".join(f"%{t}" for t in pred_temps.values()) + ";")
         for var, temp in pred_temps.items():
             ph = placeholder_for_var[var]
             pre_lines.append(f"setp.ne.u32 %{temp}, {ph}, 0;")
 
-    for out_var in inline.outputs:
-        if out_var in pred_temps:
-            temp = pred_temps[out_var]
-            ph_out = placeholder_for_var[out_var]
-            post_lines.append(f"selp.u32 {ph_out}, 1, 0, %{temp};")
+        for out_var in inline.outputs:
+            if out_var in pred_temps:
+                temp = pred_temps[out_var]
+                ph_out = placeholder_for_var[out_var]
+                post_lines.append(f"selp.u32 {ph_out}, 1, 0, %{temp};")
 
-    template_parts = []
-    if pre_lines or post_lines:
-        template_parts.append("{")
-        template_parts.extend(pre_lines)
-        template_parts.append(main_template)
-        template_parts.extend(post_lines)
-        template_parts.append("}")
+        template_parts = ["{"] + pre_lines + [main_template] + post_lines + ["}"]
         final_template = " ".join(template_parts)
-    else:
-        final_template = main_template
+
+    def constraint_for(var: Var) -> str:
+        if var.is_float:
+            if var.bitwidth == 64:
+                return "d"
+            return "f"
+        if var.bitwidth == 64:
+            return "l"
+        if var.bitwidth == 32:
+            return "r"
+        if var.bitwidth == 16:
+            return "h"
+        if var.bitwidth == 8:
+            return "b"
+        return "r"
 
     outputs = []
     for out_var in inline.outputs:
-        c = inline.constraints.get(out_var, "r")
+        c = constraint_for(out_var)
         outputs.append(f'"+{c}"({out_var.name})')
 
     inputs = []
     for arg in inline.arguments:
         if arg in inline.outputs:
             continue
-        c = inline.constraints.get(arg, "r")
+        c = constraint_for(arg)
         inputs.append(f'"{c}"({arg.name})')
 
     clobbers = ['"memory"'] if inline.clobbers_memory else []
