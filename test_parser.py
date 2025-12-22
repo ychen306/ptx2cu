@@ -157,9 +157,38 @@ def test_parse_branch_uniform_and_predicated():
     assert br.target.name == "L__BB0_4"
 
 
+def test_parse_branch_predicated_without_percent():
+    br = parse_branch("@p2 bra $L_next;")
+    assert br.is_uniform is False
+    assert br.predicate == Register(prefix="p", idx=2)
+    assert br.target.name == "L_next"
+
+
 def test_parse_branch_invalid_opcode():
     with pytest.raises(ValueError):
         parse_branch("jmp $L1;")
+
+
+def test_label_and_branch_same_line():
+    text = "L0: bra $L1;"
+    block = parse_scoped_block(text)
+    assert len(block.body) == 2
+    assert isinstance(block.body[0], Label)
+    assert block.body[0].name == "L0"
+    assert isinstance(block.body[1], Branch)
+    assert block.body[1].target.name == "L1"
+
+
+def test_label_predicated_branch_same_line():
+    text = "L2: @%p1 bra.uni $L3;"
+    block = parse_scoped_block(text)
+    assert len(block.body) == 2
+    lbl, br = block.body
+    assert isinstance(lbl, Label) and lbl.name == "L2"
+    assert isinstance(br, Branch)
+    assert br.is_uniform is True
+    assert br.predicate == Register(prefix="p", idx=1)
+    assert br.target.name == "L3"
 
 
 def test_parse_label_basic():

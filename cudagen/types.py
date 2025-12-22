@@ -39,6 +39,15 @@ class Load:
     src: Var
     offset: int
 
+@dataclass
+class CudaBranch:
+    cond : Optional[Var]
+    target : CudaLabel
+
+@dataclass
+class CudaLabel:
+    name : str
+
 
 # Re-export MemoryDecl for convenience
 MemoryDecl = ptx.MemoryDecl
