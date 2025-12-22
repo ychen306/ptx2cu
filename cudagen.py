@@ -58,36 +58,79 @@ def get_register_constraint(decl: ptx.RegisterDecl) -> str:
         return "d"
     return "r"
 
+def _collect_registers(op: ptx.Operand) -> list[ptx.Register]:
+    regs: list[ptx.Register] = []
+    if isinstance(op, ptx.Register):
+        regs.append(op)
+    elif isinstance(op, ptx.Vector):
+        regs.extend(op.values)
+    elif isinstance(op, ptx.MemoryRef) and isinstance(op.base, ptx.Register):
+        regs.append(op.base)
+    return regs
 
-def _render_operand(
+def _render_operand_with_placeholders(
     operand: ptx.Operand,
     regmap: dict[ptx.Register, RegisterInfo],
-    placeholders: list[str],
-    args: list[Var],
-    constraints: dict[Var, str],
+    reg_to_placeholder: dict[ptx.Register, str],
 ) -> str:
     if isinstance(operand, ptx.Register):
-        info = regmap.get(operand)
-        if info is None:
+        ph = reg_to_placeholder.get(operand)
+        if ph is None:
             raise ValueError(f"Missing mapping for register {operand}")
-        placeholders.append(f"%{len(args)}")
-        args.append(info.c_var)
-        constraints[info.c_var] = get_register_constraint(info.decl)
-        return placeholders[-1]
+        return ph
     if isinstance(operand, ptx.Vector):
         rendered = []
         for reg in operand.values:
-            rendered.append(_render_operand(reg, regmap, placeholders, args, constraints))
+            ph = reg_to_placeholder.get(reg)
+            if ph is None:
+                raise ValueError(f"Missing mapping for register {reg}")
+            rendered.append(ph)
         return "{" + ", ".join(rendered) + "}"
     if isinstance(operand, ptx.Immediate):
         return str(operand.value)
     if isinstance(operand, ptx.MemoryRef):
-        base_rendered = _render_operand(operand.base, regmap, placeholders, args, constraints)
+        base_rendered = _render_operand_with_placeholders(
+            operand.base, regmap, reg_to_placeholder
+        )
         if operand.offset:
             return f"[{base_rendered}+{operand.offset}]"
         return f"[{base_rendered}]"
     if isinstance(operand, ptx.ParamRef):
         return operand.name
+    raise ValueError(f"Unsupported operand type: {type(operand).__name__}")
+
+
+def _render_operand_with_index(
+    operand: ptx.Operand,
+    regmap: dict[ptx.Register, RegisterInfo],
+    constraints: dict[Var, str],
+    args: list[Var],
+    idx: int,
+) -> tuple[str, int]:
+    if isinstance(operand, ptx.Register):
+        info = regmap.get(operand)
+        if info is None:
+            raise ValueError(f"Missing mapping for register {operand}")
+        ph = f"%{idx}"
+        args.append(info.c_var)
+        constraints[info.c_var] = get_register_constraint(info.decl)
+        return ph, idx + 1
+    if isinstance(operand, ptx.Vector):
+        rendered = []
+        cur = idx
+        for reg in operand.values:
+            piece, cur = _render_operand_with_index(reg, regmap, constraints, args, cur)
+            rendered.append(piece)
+        return "{" + ", ".join(rendered) + "}", cur
+    if isinstance(operand, ptx.Immediate):
+        return str(operand.value), idx
+    if isinstance(operand, ptx.MemoryRef):
+        base_rendered, next_idx = _render_operand_with_index(operand.base, regmap, constraints, args, idx)
+        if operand.offset:
+            return f"[{base_rendered}+{operand.offset}]", next_idx
+        return f"[{base_rendered}]", next_idx
+    if isinstance(operand, ptx.ParamRef):
+        return operand.name, idx
     raise ValueError(f"Unsupported operand type: {type(operand).__name__}")
 
 
@@ -101,9 +144,14 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterI
     - InlineAsm.arguments are the Vars in placeholder order; output is the Var for the
       selected output register (if any).
     """
-    placeholders: list[str] = []
-    args: list[Var] = []
     constraints: dict[Var, str] = {}
+
+    args: list[Var] = []
+    idx = 0
+    rendered_ops: list[str] = []
+    for op in instr.operands:
+        rendered, idx = _render_operand_with_index(op, regmap, constraints, args, idx)
+        rendered_ops.append(rendered)
 
     out_regs = get_output_registers(instr)
     out_vars: list[Var] = []
@@ -111,10 +159,6 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterI
         info = regmap.get(r)
         if info:
             out_vars.append(info.c_var)
-
-    rendered_ops: list[str] = []
-    for op in instr.operands:
-        rendered_ops.append(_render_operand(op, regmap, placeholders, args, constraints))
 
     template = f"{instr.opcode} " + ", ".join(rendered_ops) + ";"
 
