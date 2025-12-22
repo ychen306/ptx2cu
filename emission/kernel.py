@@ -1,7 +1,6 @@
-
 import ptx
 
-from .render_param import get_type_decl_for_param
+from .param import get_type_decl_for_param
 
 
 def declare_kernel(entry: ptx.EntryDirective, kernel_name: str):
