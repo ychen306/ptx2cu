@@ -30,7 +30,9 @@ def _opcode_bitwidth(opcode: str) -> Optional[int]:
     return int(m[-1])
 
 
-def emit_inline_asm(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> InlineAsm:
+def emit_inline_asm(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> InlineAsm:
     """
     Emit an InlineAsm for a PTX Instruction using a register-to-Var mapping.
 

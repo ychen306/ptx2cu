@@ -186,10 +186,14 @@ def _split_operands(operand_text: str) -> list[str]:
     return parts
 
 
-def _parse_operand(token: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> Operand:
+def _parse_operand(
+    token: str, mem_map: Optional[dict[str, MemoryDecl]] = None
+) -> Operand:
     if token.startswith("{") and token.endswith("}"):
         inner = token[1:-1]
-        regs = [_parse_register(part.strip()) for part in inner.split(",") if part.strip()]
+        regs = [
+            _parse_register(part.strip()) for part in inner.split(",") if part.strip()
+        ]
         return Vector(values=regs)
 
     if token.startswith("[") and token.endswith("]"):
@@ -226,7 +230,9 @@ def _parse_operand(token: str, mem_map: Optional[dict[str, MemoryDecl]] = None) 
     return _parse_register(token)
 
 
-def parse_instruction(line: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> Instruction:
+def parse_instruction(
+    line: str, mem_map: Optional[dict[str, MemoryDecl]] = None
+) -> Instruction:
     """
     Parse a non-branch instruction line into an Instruction.
 
@@ -351,7 +357,9 @@ def _brace_tokens(lines: list[str]) -> list[str]:
     return tokens
 
 
-def _process_statement(stmt: str, block: ScopedBlock, mem_map: Optional[dict[str, MemoryDecl]] = None) -> None:
+def _process_statement(
+    stmt: str, block: ScopedBlock, mem_map: Optional[dict[str, MemoryDecl]] = None
+) -> None:
     if not stmt:
         return
     if stmt.startswith(".pragma"):
@@ -375,7 +383,9 @@ def _process_statement(stmt: str, block: ScopedBlock, mem_map: Optional[dict[str
     block.body.append(parse_instruction(stmt, mem_map=mem_map))
 
 
-def parse_scoped_block(text: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> ScopedBlock:
+def parse_scoped_block(
+    text: str, mem_map: Optional[dict[str, MemoryDecl]] = None
+) -> ScopedBlock:
     """
     Parse a scoped block text (which may contain nested braces) into a ScopedBlock tree.
     Braces can appear inline with other statements.
@@ -409,7 +419,9 @@ def parse_scoped_block(text: str, mem_map: Optional[dict[str, MemoryDecl]] = Non
     return root
 
 
-def parse_entry_directive(text: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> EntryDirective:
+def parse_entry_directive(
+    text: str, mem_map: Optional[dict[str, MemoryDecl]] = None
+) -> EntryDirective:
     """
     Parse an .entry directive (including its parameter list and scoped body).
     """
@@ -472,13 +484,19 @@ def parse_module(text: str) -> Module:
                 brace_balance = line.count("{") - line.count("}")
                 seen_body = line.count("{") > 0
                 if seen_body and brace_balance == 0:
-                    statements.append(parse_entry_directive("\n".join(entry_lines), mem_map=mem_map))
+                    statements.append(
+                        parse_entry_directive("\n".join(entry_lines), mem_map=mem_map)
+                    )
                     in_entry = False
                 continue
 
             if not stripped:
                 continue
-            if stripped.startswith(".global") or stripped.startswith(".shared") or stripped.startswith(".extern"):
+            if (
+                stripped.startswith(".global")
+                or stripped.startswith(".shared")
+                or stripped.startswith(".extern")
+            ):
                 try:
                     md = parse_memory_directive(stripped)
                     statements.append(md)
@@ -493,7 +511,9 @@ def parse_module(text: str) -> Module:
             if line.count("{") > 0:
                 seen_body = True
             if seen_body and brace_balance == 0:
-                statements.append(parse_entry_directive("\n".join(entry_lines), mem_map=mem_map))
+                statements.append(
+                    parse_entry_directive("\n".join(entry_lines), mem_map=mem_map)
+                )
                 in_entry = False
 
     if in_entry:

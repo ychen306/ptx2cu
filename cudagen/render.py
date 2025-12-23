@@ -81,7 +81,12 @@ class CudaGen:
             is_float = False
             represents_predicate = False
 
-        var = Var(name=name, bitwidth=bitwidth, is_float=is_float, represents_predicate=represents_predicate)
+        var = Var(
+            name=name,
+            bitwidth=bitwidth,
+            is_float=is_float,
+            represents_predicate=represents_predicate,
+        )
         self.var_decls.append(var)
         return var
 
@@ -118,13 +123,23 @@ class CudaGen:
         arguments: list[tuple[Var, ptx.MemoryDecl]] = []
         for p in entry.params:
             _, bitwidth, is_float = type_info_for_datatype(p.datatype)
-            arg_var = Var(name=p.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
+            arg_var = Var(
+                name=p.name,
+                bitwidth=bitwidth,
+                is_float=is_float,
+                represents_predicate=False,
+            )
             arguments.append((arg_var, p))
 
         body_items: list = []
         self._walk_block(entry.body, body_items)
 
-        return CudaKernel(name=entry.name, arguments=arguments, var_decls=self.var_decls, body=body_items)
+        return CudaKernel(
+            name=entry.name,
+            arguments=arguments,
+            var_decls=self.var_decls,
+            body=body_items,
+        )
 
     def run(self, module: ptx.Module) -> "CudaModule":
         """
@@ -153,7 +168,9 @@ class CudaGen:
         scope_map: dict[ptx.Register, Var] = {}
         for decl in block.registers:
             for i in range(decl.num_regs):
-                reg_idx = i if decl.num_regs > 1 else (None if decl.prefix == "p" else i)
+                reg_idx = (
+                    i if decl.num_regs > 1 else (None if decl.prefix == "p" else i)
+                )
                 reg = ptx.Register(prefix=decl.prefix, idx=reg_idx)
                 scope_map[reg] = self._alloc_var(decl, reg)
 

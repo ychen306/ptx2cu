@@ -6,7 +6,9 @@ from cudagen import CudaGen, Var
 
 def test_enter_and_exit_scope_basic():
     gen = CudaGen()
-    block = ptx.ScopedBlock(registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=2)], body=[])
+    block = ptx.ScopedBlock(
+        registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=2)], body=[]
+    )
     gen.enter_scope(block)
     r0 = ptx.Register(prefix="r", idx=0)
     r1 = ptx.Register(prefix="r", idx=1)
@@ -22,8 +24,12 @@ def test_enter_and_exit_scope_basic():
 
 def test_nested_scopes_shadowing():
     gen = CudaGen()
-    outer = ptx.ScopedBlock(registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1)], body=[])
-    inner = ptx.ScopedBlock(registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1)], body=[])
+    outer = ptx.ScopedBlock(
+        registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1)], body=[]
+    )
+    inner = ptx.ScopedBlock(
+        registers=[ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1)], body=[]
+    )
     gen.enter_scope(outer)
     outer_reg = ptx.Register(prefix="r", idx=0)
     outer_var = gen.reg_map[outer_reg]
@@ -40,7 +46,9 @@ def test_nested_scopes_shadowing():
 
 def test_predicate_registers_get_predicate_flag():
     gen = CudaGen()
-    block = ptx.ScopedBlock(registers=[ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1)], body=[])
+    block = ptx.ScopedBlock(
+        registers=[ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1)], body=[]
+    )
     gen.enter_scope(block)
     preg = ptx.Register(prefix="p", idx=None)
     var = gen.reg_map[preg]

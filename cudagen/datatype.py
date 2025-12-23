@@ -23,7 +23,11 @@ def ctype_for_datatype(datatype: str) -> str:
     if dt.startswith("f32"):
         return "float"
     if dt.startswith(("u64", "b64", "s64", "f64")):
-        return "double" if dt.startswith("f64") else ("long long" if dt.startswith("s64") else "unsigned long long")
+        return (
+            "double"
+            if dt.startswith("f64")
+            else ("long long" if dt.startswith("s64") else "unsigned long long")
+        )
     return "unsigned int"
 
 

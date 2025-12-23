@@ -22,7 +22,11 @@ def test_emit_inline_asm_basic():
     asm = emit_inline_asm(instr, regmap)
     assert isinstance(asm, InlineAsm)
     assert asm.template == "add.s32 %0, %1, %2;"
-    assert asm.arguments == [Var("r1", 32, False), Var("r1", 32, False), Var("r2", 32, False)]
+    assert asm.arguments == [
+        Var("r1", 32, False),
+        Var("r1", 32, False),
+        Var("r2", 32, False),
+    ]
     assert asm.outputs == [Var("r1", 32, False)]
 
 
@@ -37,7 +41,12 @@ def test_emit_inline_asm_vector_and_memory():
         opcode="st.global.v2.u32",
         operands=[
             ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=0), offset=16),
-            ptx.Vector(values=[ptx.Register(prefix="r", idx=1), ptx.Register(prefix="r", idx=2)]),
+            ptx.Vector(
+                values=[
+                    ptx.Register(prefix="r", idx=1),
+                    ptx.Register(prefix="r", idx=2),
+                ]
+            ),
         ],
     )
     asm = emit_inline_asm(instr, regmap)
@@ -61,10 +70,7 @@ def test_emit_inline_asm_missing_register():
 def test_emit_inline_asm_wgmma_vector():
     # Mirrors the wgmma operand structure tested in parser tests
     regs = [ptx.Register(prefix="r", idx=i) for i in range(1, 5)]
-    regmap = {
-        r: Var(f"{r.prefix}{r.idx}", 32, False)
-        for r in regs
-    }
+    regmap = {r: Var(f"{r.prefix}{r.idx}", 32, False) for r in regs}
     regmap.update(
         {
             ptx.Register(prefix="rd", idx=74): Var("rd74", 64, False),
@@ -93,7 +99,13 @@ def test_emit_inline_asm_wgmma_vector():
 
 def test_emit_inline_asm_with_memory_symbol():
     regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
-    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    mem_decl = MemoryDecl(
+        alignment=None,
+        datatype="u32",
+        name="shared_memory",
+        num_elements=0,
+        memory_type=MemoryType.Shared,
+    )
     instr = ptx.Instruction(
         predicate=None,
         opcode="mov.u32",

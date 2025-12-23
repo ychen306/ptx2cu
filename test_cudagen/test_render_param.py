@@ -12,11 +12,15 @@ def test_emit_ld_param_scalar():
             ptx.MemoryRef(base=ptx.ParamRef(name="p0"), offset=0),
         ],
     )
-    regmap = {
-        ptx.Register(prefix="r", idx=1): Var("r1", 32, False)
-    }
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
     param_map = {
-        "p0": MemoryDecl(alignment=None, datatype="u32", name="p0", num_elements=1, memory_type=ptx.MemoryType.Param)
+        "p0": MemoryDecl(
+            alignment=None,
+            datatype="u32",
+            name="p0",
+            num_elements=1,
+            memory_type=ptx.MemoryType.Param,
+        )
     }
     load = emit_ld_param(instr, regmap, param_map)
     assert isinstance(load, Load)
@@ -34,11 +38,15 @@ def test_emit_ld_param_array_offset():
             ptx.MemoryRef(base=ptx.ParamRef(name="arr"), offset=4),
         ],
     )
-    regmap = {
-        ptx.Register(prefix="r", idx=2): Var("r2", 32, False)
-    }
+    regmap = {ptx.Register(prefix="r", idx=2): Var("r2", 32, False)}
     param_map = {
-        "arr": MemoryDecl(alignment=None, datatype="f16", name="arr", num_elements=4, memory_type=ptx.MemoryType.Param)
+        "arr": MemoryDecl(
+            alignment=None,
+            datatype="f16",
+            name="arr",
+            num_elements=4,
+            memory_type=ptx.MemoryType.Param,
+        )
     }
     load = emit_ld_param(instr, regmap, param_map)
     assert load.dst == Var("r2", 32, False)

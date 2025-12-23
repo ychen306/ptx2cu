@@ -31,21 +31,33 @@ from parser import (
 def test_parse_param_with_align_and_array():
     pd = parse_param_directive(".param .align 4 .b8 foo[12],")
     assert pd == MemoryDecl(
-        alignment=4, datatype="b8", name="foo", num_elements=12, memory_type=MemoryType.Param
+        alignment=4,
+        datatype="b8",
+        name="foo",
+        num_elements=12,
+        memory_type=MemoryType.Param,
     )
 
 
 def test_parse_param_without_align_sets_alignment_none():
     pd = parse_param_directive("  .param .u64 bar")
     assert pd == MemoryDecl(
-        alignment=None, datatype="u64", name="bar", num_elements=1, memory_type=MemoryType.Param
+        alignment=None,
+        datatype="u64",
+        name="bar",
+        num_elements=1,
+        memory_type=MemoryType.Param,
     )
 
 
 def test_parse_param_strips_comments_and_trailing_punctuation():
     pd = parse_param_directive(".param .align 2 .b16 baz[3]; // comment here")
     assert pd == MemoryDecl(
-        alignment=2, datatype="b16", name="baz", num_elements=3, memory_type=MemoryType.Param
+        alignment=2,
+        datatype="b16",
+        name="baz",
+        num_elements=3,
+        memory_type=MemoryType.Param,
     )
 
 
@@ -81,6 +93,7 @@ def test_parse_register_decl_basic():
 def test_parse_register_decl_pred_and_comments():
     decl = parse_register_decl(".reg .pred %p<7>; // predicate regs")
     assert decl == RegisterDecl(datatype="pred", prefix="p", num_regs=7)
+
 
 def test_parse_register_decl_without_count():
     decl = parse_register_decl(".reg .pred p;")
@@ -131,7 +144,11 @@ def test_parse_instruction_hex_immediate_without_prefix():
 def test_parse_instruction_named_memory_with_map():
     mem_map = {
         "shared_memory": MemoryDecl(
-            alignment=None, datatype="u32", name="shared_memory", num_elements=1, memory_type=MemoryType.Shared
+            alignment=None,
+            datatype="u32",
+            name="shared_memory",
+            num_elements=1,
+            memory_type=MemoryType.Shared,
         )
     }
     inst = parse_instruction("mov.u32 %r1, shared_memory;", mem_map=mem_map)
@@ -176,6 +193,7 @@ def test_parse_instruction_vector_and_mem_offset():
 def test_parse_instruction_branch_rejected():
     with pytest.raises(ValueError):
         parse_instruction("bra $L1;")
+
 
 def test_parse_branch_basic():
     br = parse_branch("bra $L1;")
@@ -263,7 +281,9 @@ def test_parse_scoped_block_nested_and_mixed_lines():
     assert isinstance(root.body[0], Label) and root.body[0].name == "outer"
     outer_block = root.body[1]
     assert isinstance(outer_block, ScopedBlock)
-    assert outer_block.registers == [RegisterDecl(datatype="pred", prefix="p", num_regs=1)]
+    assert outer_block.registers == [
+        RegisterDecl(datatype="pred", prefix="p", num_regs=1)
+    ]
     assert isinstance(outer_block.body[0], Branch)
     nested = outer_block.body[1]
     assert isinstance(nested, ScopedBlock)

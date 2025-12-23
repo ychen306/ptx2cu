@@ -34,7 +34,11 @@ def emit_load(load: Load) -> str:
     idx = load.offset // elem_size
 
     if load.is_float:
-        ctype = "double" if load.bitwidth == 64 else ("float" if load.bitwidth == 32 else "__half")
+        ctype = (
+            "double"
+            if load.bitwidth == 64
+            else ("float" if load.bitwidth == 32 else "__half")
+        )
     else:
         if load.bitwidth == 64:
             ctype = "unsigned long long"

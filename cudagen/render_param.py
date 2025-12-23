@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Mapping
@@ -20,7 +19,9 @@ def emit_ld_param(
     if not instr.opcode.startswith("ld.param"):
         raise ValueError("emit_ld_param expects an ld.param instruction")
     if len(instr.operands) < 2:
-        raise ValueError("ld.param instruction requires at least dest and source operands")
+        raise ValueError(
+            "ld.param instruction requires at least dest and source operands"
+        )
 
     dest = instr.operands[0]
     if not isinstance(dest, ptx.Register):
@@ -48,6 +49,10 @@ def emit_ld_param(
         raise ValueError(f"Missing mapping for dest register {dest}")
     lhs = dest_var
 
-    src_var = Var(name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
+    src_var = Var(
+        name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False
+    )
 
-    return Load(bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset)
+    return Load(
+        bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset
+    )

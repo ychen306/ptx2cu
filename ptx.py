@@ -70,9 +70,11 @@ class MemoryRef(Operand):
     base: Register | ParamRef
     offset: int
 
+
 @dataclass(frozen=True)
 class MemorySymbol(Operand):
     decl: MemoryDecl
+
 
 @dataclass
 class Instruction(InstructionBase):

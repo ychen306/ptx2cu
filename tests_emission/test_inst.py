@@ -19,18 +19,12 @@ def test_emit_inline_asm_string_basic():
         ],
     )
     s = emit_inline_asm_string(instr, regmap)
-    assert (
-        s
-        == 'asm volatile("add.s32 %0, %1, %2;" : "+r"(r1) : "r"(r2) : );'
-    )
+    assert s == 'asm volatile("add.s32 %0, %1, %2;" : "+r"(r1) : "r"(r2) : );'
 
 
 def test_emit_inline_asm_string_wgmma():
     regs = [ptx.Register(prefix="r", idx=i) for i in range(1, 5)]
-    regmap = {
-        r: Var(f"{r.prefix}{r.idx}", 32, False)
-        for r in regs
-    }
+    regmap = {r: Var(f"{r.prefix}{r.idx}", 32, False) for r in regs}
     regmap.update(
         {
             ptx.Register(prefix="rd", idx=74): Var("rd74", 64, False),
@@ -71,10 +65,7 @@ def test_parse_and_emit_wgmma():
 
     instr = parse_instruction(line)
     regs = list(instr.operands[0].values)
-    regmap = {
-        r: Var(f"{r.prefix}{r.idx}", 32, False)
-        for r in regs
-    }
+    regmap = {r: Var(f"{r.prefix}{r.idx}", 32, False) for r in regs}
     regmap[ptx.Register(prefix="rd", idx=86)] = Var("rd86", 64, False)
     regmap[ptx.Register(prefix="rd", idx=91)] = Var("rd91", 64, False)
     regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
@@ -88,13 +79,20 @@ def test_parse_and_emit_wgmma():
 
 def test_emit_inline_asm_string_with_memory_symbol():
     regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
-    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    mem_decl = MemoryDecl(
+        alignment=None,
+        datatype="u32",
+        name="shared_memory",
+        num_elements=0,
+        memory_type=MemoryType.Shared,
+    )
     instr = ptx.Instruction(
         predicate=None,
         opcode="mov.u32",
         operands=[ptx.Register(prefix="r", idx=1), MemorySymbol(decl=mem_decl)],
     )
     from cudagen.render_inst import emit_inline_asm
+
     asm_ir = emit_inline_asm(instr, regmap)
     s = emit_inline_asm_string(instr, regmap)
     assert (
@@ -105,13 +103,20 @@ def test_emit_inline_asm_string_with_memory_symbol():
 
 def test_emit_inline_asm_string_with_memory_symbol_32bit_addr():
     regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
-    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    mem_decl = MemoryDecl(
+        alignment=None,
+        datatype="u32",
+        name="shared_memory",
+        num_elements=0,
+        memory_type=MemoryType.Shared,
+    )
     instr = ptx.Instruction(
         predicate=None,
         opcode="mov.u32",
         operands=[ptx.Register(prefix="r", idx=1), MemorySymbol(decl=mem_decl)],
     )
     from cudagen.render_inst import emit_inline_asm
+
     asm_ir = emit_inline_asm(instr, regmap)
     # Manually tweak AddressOf bitwidth to exercise downcast path
     for arg in asm_ir.arguments:

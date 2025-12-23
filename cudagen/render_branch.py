@@ -15,7 +15,9 @@ def emit_branch(branch: ptx.Branch, regmap: Mapping[ptx.Register, Var]) -> CudaB
     if branch.predicate:
         var = regmap.get(branch.predicate)
         if var is None:
-            raise ValueError(f"Missing mapping for predicate register {branch.predicate}")
+            raise ValueError(
+                f"Missing mapping for predicate register {branch.predicate}"
+            )
         cond = var
 
     label = CudaLabel(name=branch.target.name)

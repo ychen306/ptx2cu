@@ -8,7 +8,9 @@ from cudagen.render_inst import emit_inline_asm
 from cudagen.types import Var, Expr, AddressOf
 
 
-def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> str:
+def emit_inline_asm_string(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> str:
     """
     Emit a CUDA asm volatile string for a PTX instruction.
     """
@@ -25,7 +27,11 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
     for expr, ph in placeholder_for_expr:
         placeholder_for_expr_dict[id(expr)] = ph
 
-    pred_vars = [var for var, _ in placeholder_for_expr if isinstance(var, Var) and var.represents_predicate]
+    pred_vars = [
+        var
+        for var, _ in placeholder_for_expr
+        if isinstance(var, Var) and var.represents_predicate
+    ]
 
     final_template = inline.template
     pre_lines: list[str] = []
@@ -41,7 +47,9 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
             if ph:
                 main_template = main_template.replace(ph, f"%{temp}")
 
-        pre_lines.append(".reg .pred " + ", ".join(f"%{t}" for t in pred_temps.values()) + ";")
+        pre_lines.append(
+            ".reg .pred " + ", ".join(f"%{t}" for t in pred_temps.values()) + ";"
+        )
         for var, temp in pred_temps.items():
             ph = placeholder_for_expr_dict[id(var)]
             pre_lines.append(f"setp.ne.u32 %{temp}, {ph}, 0;")
@@ -93,7 +101,9 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
             if bw != 64:
                 # only support shared for downcast path for now
                 if arg.symbol.decl.memory_type != ptx.MemoryType.Shared:
-                    raise ValueError("AddressOf downcast only supported for shared memory symbols")
+                    raise ValueError(
+                        "AddressOf downcast only supported for shared memory symbols"
+                    )
                 tmp64 = f"ptr64_{len(addr_prep)}"
                 tmpN = f"ptr{bw}_{len(addr_prep)}"
                 addr_prep.append(f".reg .u64 %{tmp64};")

@@ -38,7 +38,9 @@ def render_operand_with_index(
     if isinstance(operand, ptx.Immediate):
         return str(operand.value), idx
     if isinstance(operand, ptx.MemoryRef):
-        base_rendered, next_idx = render_operand_with_index(operand.base, regmap, args, idx)
+        base_rendered, next_idx = render_operand_with_index(
+            operand.base, regmap, args, idx
+        )
         if operand.offset:
             return f"[{base_rendered}+{operand.offset}]", next_idx
         return f"[{base_rendered}]", next_idx
