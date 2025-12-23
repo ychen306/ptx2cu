@@ -26,4 +26,4 @@ def declare_memory(mem: MemoryDecl) -> str:
     size_part = "[]" if mem.num_elements == 0 else f"[{mem.num_elements}]"
 
     extern_kw = "extern " if mem.num_elements == 0 else ""
-    return f'{extern_kw}extern "C" {scope_kw} {align_kw}{ctype} {mem.name}{size_part};'
+    return f'extern "C" {extern_kw}{scope_kw} {align_kw}{ctype} {mem.name}{size_part};'

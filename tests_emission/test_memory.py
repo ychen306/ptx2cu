@@ -10,4 +10,4 @@ def test_declare_global_memory():
 
 def test_declare_shared_extern_memory_with_align():
     mem = MemoryDecl(alignment=16, datatype="u8", name="shared_mem", num_elements=0, memory_type=ptx.MemoryType.Shared)
-    assert declare_memory(mem) == 'extern extern "C" __shared__ __align__(16) unsigned char shared_mem[];'
+    assert declare_memory(mem) == 'extern "C" extern __shared__ __align__(16) unsigned char shared_mem[];'
