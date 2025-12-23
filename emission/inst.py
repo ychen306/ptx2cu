@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 import ptx
 
 from cudagen.render_inst import emit_inline_asm
 from cudagen.types import Var
 
 
-def emit_inline_asm_string(instr: ptx.Instruction, regmap: dict[ptx.Register, Var]) -> str:
+def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> str:
     """
     Emit a CUDA asm volatile string for a PTX instruction.
     """

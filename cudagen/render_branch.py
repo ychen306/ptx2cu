@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 import ptx
 
 from .types import CudaBranch, CudaLabel, Var
 
 
-def emit_branch(branch: ptx.Branch, regmap: dict[ptx.Register, Var]) -> CudaBranch:
+def emit_branch(branch: ptx.Branch, regmap: Mapping[ptx.Register, Var]) -> CudaBranch:
     """
     Lower a PTX Branch into a CudaBranch. Uniformity is ignored in this IR.
     """

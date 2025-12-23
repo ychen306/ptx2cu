@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+from typing import Mapping
+
 import ptx
 
 from .datatype import type_info_for_datatype
@@ -9,7 +11,7 @@ from .types import Load, MemoryDecl, Var
 
 def emit_ld_param(
     instr: ptx.Instruction,
-    regmap: dict[ptx.Register, Var],
+    regmap: Mapping[ptx.Register, Var],
     param_map: dict[str, MemoryDecl],
 ) -> Load:
     """

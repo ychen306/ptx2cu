@@ -1,3 +1,5 @@
+from typing import Mapping
+
 import ptx
 
 from .types import Var
@@ -16,7 +18,7 @@ def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
 
 def render_operand_with_index(
     operand: ptx.Operand,
-    regmap: dict[ptx.Register, Var],
+    regmap: Mapping[ptx.Register, Var],
     args: list[Var],
     idx: int,
 ) -> tuple[str, int]:

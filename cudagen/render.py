@@ -18,6 +18,7 @@ class CudaGen:
     def __init__(self):
         self.reg_map: ChainMap[ptx.Register, Var] = ChainMap()
         self._name_counters: dict[str, int] = {}
+        self.var_decls: list[Var] = []
 
     def _alloc_var(self, decl: ptx.RegisterDecl, reg: ptx.Register) -> Var:
         """
@@ -57,7 +58,9 @@ class CudaGen:
             is_float = False
             represents_predicate = False
 
-        return Var(name=name, bitwidth=bitwidth, is_float=is_float, represents_predicate=represents_predicate)
+        var = Var(name=name, bitwidth=bitwidth, is_float=is_float, represents_predicate=represents_predicate)
+        self.var_decls.append(var)
+        return var
 
     def enter_scope(self, block: ptx.ScopedBlock) -> None:
         """

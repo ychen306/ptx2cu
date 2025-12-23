@@ -12,9 +12,12 @@ def test_enter_and_exit_scope_basic():
     r1 = ptx.Register(prefix="r", idx=1)
     assert gen.reg_map[r0] == Var("r0", 32, False)
     assert gen.reg_map[r1] == Var("r1", 32, False)
+    assert gen.var_decls == [Var("r0", 32, False), Var("r1", 32, False)]
     gen.exit_scope()
     with pytest.raises(KeyError):
         _ = gen.reg_map[r0]
+    # var_decls persists across scope exits
+    assert gen.var_decls == [Var("r0", 32, False), Var("r1", 32, False)]
 
 
 def test_nested_scopes_shadowing():
@@ -30,6 +33,9 @@ def test_nested_scopes_shadowing():
     assert outer_var != inner_var  # unique names
     gen.exit_scope()
     assert gen.reg_map[outer_reg] == outer_var
+    # Allocation order preserved and persisted
+    assert gen.var_decls[0] == outer_var
+    assert gen.var_decls[1] == inner_var
 
 
 def test_predicate_registers_get_predicate_flag():
