@@ -19,6 +19,7 @@ def test_emit_inline_asm_string_basic():
         ],
     )
     from cudagen.render_inst import emit_inline_asm
+
     s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
     assert s == 'asm volatile("add.s32 %0, %1, %2;" : "+r"(r1) : "r"(r2) : );'
 
@@ -49,6 +50,7 @@ def test_emit_inline_asm_string_wgmma():
         ],
     )
     from cudagen.render_inst import emit_inline_asm
+
     s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
     assert (
         s
@@ -73,6 +75,7 @@ def test_parse_and_emit_wgmma():
     regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
 
     from cudagen.render_inst import emit_inline_asm
+
     s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
     assert (
         s
@@ -98,6 +101,7 @@ def test_emit_inline_asm_string_with_memory_symbol():
 
     asm_ir = emit_inline_asm(instr, regmap)
     from cudagen.render_inst import emit_inline_asm
+
     s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
     assert (
         s
@@ -172,7 +176,7 @@ def test_emit_inline_asm_string_store_has_inputs_only():
 
     s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
     # Expect both operands as inputs, no outputs
-    assert 'st.global.f32 [%0], %1;' in s
+    assert "st.global.f32 [%0], %1;" in s
     assert ':+f"(f4)' not in s
     assert '"f"(f4)' in s
     assert '"l"(rd7)' in s

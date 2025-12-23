@@ -125,9 +125,9 @@ def test_parse_instruction_predicated_and_immediate():
         operands=[
             Register(prefix="r", idx=1),
             Register(prefix="r", idx=2),
-                Immediate(value="4"),
-            ],
-        )
+            Immediate(value="4"),
+        ],
+    )
 
 
 def test_parse_instruction_predicate_without_percent():

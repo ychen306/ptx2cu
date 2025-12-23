@@ -52,7 +52,9 @@ def emit_ld_param(
         raise ValueError(f"Missing mapping for dest register {dest}")
     lhs = dest_var
 
-    src_var = Var(name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
+    src_var = Var(
+        name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False
+    )
 
     return Load(
         bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset

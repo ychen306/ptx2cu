@@ -28,7 +28,11 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
         placeholder_for_expr_dict[id(expr)] = ph
         idx += 1
 
-    pred_vars = [var for var, _ in placeholder_for_expr if isinstance(var, Var) and var.represents_predicate]
+    pred_vars = [
+        var
+        for var, _ in placeholder_for_expr
+        if isinstance(var, Var) and var.represents_predicate
+    ]
 
     final_template = inline.template
     pre_lines: list[str] = []

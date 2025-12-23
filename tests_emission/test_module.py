@@ -4,8 +4,20 @@ from emission.module import emit_cuda_module
 
 
 def test_emit_cuda_module_with_globals_and_kernel():
-    gdecl = ptx.MemoryDecl(alignment=None, datatype="u32", name="g0", num_elements=4, memory_type=ptx.MemoryType.Global)
-    arg_decl = ptx.MemoryDecl(alignment=None, datatype="u32", name="p0", num_elements=1, memory_type=ptx.MemoryType.Param)
+    gdecl = ptx.MemoryDecl(
+        alignment=None,
+        datatype="u32",
+        name="g0",
+        num_elements=4,
+        memory_type=ptx.MemoryType.Global,
+    )
+    arg_decl = ptx.MemoryDecl(
+        alignment=None,
+        datatype="u32",
+        name="p0",
+        num_elements=1,
+        memory_type=ptx.MemoryType.Param,
+    )
     kernel = CudaKernel(
         name="k",
         arguments=[(Var("p0", 32, False), arg_decl)],

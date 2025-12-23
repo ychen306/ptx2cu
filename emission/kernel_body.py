@@ -19,7 +19,9 @@ def emit_kernel(kernel: CudaKernel) -> str:
 
         struct_def, type_name = get_type_decl_for_param(decl)
         arg_parts.append(f"{type_name} {var.name}")
-    signature = f'extern "C" __global__ void {kernel.name}(' + ", ".join(arg_parts) + ")"
+    signature = (
+        f'extern "C" __global__ void {kernel.name}(' + ", ".join(arg_parts) + ")"
+    )
 
     lines = [signature, "{"]
     indent = "  "
