@@ -16,18 +16,19 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
         return s.replace("\\", "\\\\").replace('"', '\\"')
 
     placeholder_for_expr = []
-    for idx, expr in enumerate(inline.arguments + inline.outputs):
-        if isinstance(expr, (Var, AddressOf)):
-            placeholder_for_expr.append((expr, f"%{idx}"))
     placeholder_for_expr_dict = {}
-    for expr, ph in placeholder_for_expr:
+    idx = 0
+    for expr in inline.arguments + inline.outputs:
+        if not isinstance(expr, (Var, AddressOf)):
+            continue
+        if id(expr) in placeholder_for_expr_dict:
+            continue
+        ph = f"%{idx}"
+        placeholder_for_expr.append((expr, ph))
         placeholder_for_expr_dict[id(expr)] = ph
+        idx += 1
 
-    pred_vars = [
-        var
-        for var, _ in placeholder_for_expr
-        if isinstance(var, Var) and var.represents_predicate
-    ]
+    pred_vars = [var for var, _ in placeholder_for_expr if isinstance(var, Var) and var.represents_predicate]
 
     final_template = inline.template
     pre_lines: list[str] = []

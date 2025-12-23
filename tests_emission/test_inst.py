@@ -129,3 +129,27 @@ def test_emit_inline_asm_string_with_memory_symbol_32bit_addr():
     s = emit_inline_asm_ir(asm_ir)
     assert "cvta.shared.u64" in s
     assert "cvt.u32.u64" in s
+
+
+def test_emit_inline_asm_string_predicate_placeholder_not_reused():
+    # Regression: ensure placeholder is assigned once per Var
+    regmap = {
+        ptx.Register(prefix="p", idx=None): Var("p1", 32, False, True),
+        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
+        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="setp.ge.s32",
+        operands=[
+            ptx.Register(prefix="p", idx=None),
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    from cudagen.render_inst import emit_inline_asm
+
+    s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
+    assert s.count("%") >= 3  # placeholders exist
+    # ensure no extra placeholder was generated for the predicate var
+    assert "%3" not in s  # only %0-%2 should appear for three operands
