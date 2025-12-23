@@ -3,7 +3,7 @@ from __future__ import annotations
 from emission.inst import emit_inline_asm_ir
 from emission.param import emit_load
 from emission.branch import emit_branch_string
-from emission.local import declare_local
+from emission.local import declare_local, ctype_for_var
 from cudagen.types import CudaKernel, InlineAsm, Load, CudaBranch, CudaLabel, Return
 
 
@@ -23,9 +23,18 @@ def emit_kernel(kernel: CudaKernel) -> str:
 
     lines = [signature, "{"]
     indent = "  "
-    # local declarations
+    # local declarations grouped by type
+    grouped: dict[str, list[str]] = {}
+    order: list[str] = []
     for v in kernel.var_decls:
-        lines.append(indent + declare_local(v))
+        ctype = ctype_for_var(v)
+        if ctype not in grouped:
+            grouped[ctype] = []
+            order.append(ctype)
+        grouped[ctype].append(v.name)
+    for ctype in order:
+        names = grouped[ctype]
+        lines.append(f"{indent}{ctype} " + ", ".join(names) + ";")
 
     for item in kernel.body:
         if isinstance(item, InlineAsm):

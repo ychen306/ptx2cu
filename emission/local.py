@@ -3,7 +3,7 @@ from __future__ import annotations
 from cudagen.types import Var
 
 
-def _ctype_for_var(var: Var) -> str:
+def ctype_for_var(var: Var) -> str:
     if var.represents_predicate:
         return "unsigned int"
     if var.is_float:
@@ -27,5 +27,5 @@ def declare_local(var: Var) -> str:
     """
     Declare a local C variable for the given Var.
     """
-    ctype = _ctype_for_var(var)
+    ctype = ctype_for_var(var)
     return f"{ctype} {var.name};"

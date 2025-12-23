@@ -478,7 +478,7 @@ def parse_module(text: str) -> Module:
     for line in text.splitlines():
         stripped = line.split("//", 1)[0].strip()
         if not in_entry:
-            if stripped.startswith(".entry"):
+            if stripped.startswith(".entry") or stripped.startswith(".visible .entry"):
                 in_entry = True
                 entry_lines = [line]
                 brace_balance = line.count("{") - line.count("}")

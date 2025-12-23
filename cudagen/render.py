@@ -40,6 +40,9 @@ class CudaGen:
             ptx.Register(prefix="tid.x", idx=None): Var("threadIdx.x", 32, False),
             ptx.Register(prefix="tid.y", idx=None): Var("threadIdx.y", 32, False),
             ptx.Register(prefix="tid.z", idx=None): Var("threadIdx.z", 32, False),
+            ptx.Register(prefix="ntid.x", idx=None): Var("blockDim.x", 32, False),
+            ptx.Register(prefix="ntid.y", idx=None): Var("blockDim.y", 32, False),
+            ptx.Register(prefix="ntid.z", idx=None): Var("blockDim.z", 32, False),
         }
         self.reg_map = ChainMap(special)
 
