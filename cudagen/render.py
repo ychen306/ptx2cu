@@ -5,7 +5,7 @@ from typing import List
 
 import ptx
 
-from .types import CudaKernel, CudaLabel, Var
+from .types import CudaKernel, CudaLabel, Var, CudaModule
 from .render_branch import emit_branch
 from .render_inst import emit_inline_asm
 from .render_param import emit_ld_param
@@ -25,6 +25,7 @@ class CudaGen:
         self._name_counters: dict[str, int] = {}
         self.var_decls: list[Var] = []
         self.param_map: dict[str, ptx.MemoryDecl] = {}
+        self.mem_map: dict[str, ptx.MemoryDecl] = {}
         self._init_special_regs()
 
     def _init_special_regs(self):
@@ -104,7 +105,7 @@ class CudaGen:
             # ignore other directive/opaque nodes for now
         self.exit_scope()
 
-    def run(self, entry: ptx.EntryDirective) -> "CudaKernel":
+    def run_on_entry(self, entry: ptx.EntryDirective) -> "CudaKernel":
         """
         Lower a PTX EntryDirective into a CudaKernel.
         """
@@ -123,7 +124,27 @@ class CudaGen:
         body_items: list = []
         self._walk_block(entry.body, body_items)
 
-        return CudaKernel(arguments=arguments, var_decls=self.var_decls, body=body_items)
+        return CudaKernel(name=entry.name, arguments=arguments, var_decls=self.var_decls, body=body_items)
+
+    def run(self, module: ptx.Module) -> "CudaModule":
+        """
+        Lower an entire PTX module into a CudaModule, producing kernels for each entry.
+        """
+        self.mem_map = {}
+        entries: list[ptx.EntryDirective] = []
+        globals: list[ptx.MemoryDecl] = []
+        for stmt in module.statements:
+            if isinstance(stmt, ptx.EntryDirective):
+                entries.append(stmt)
+            elif isinstance(stmt, ptx.MemoryDecl):
+                globals.append(stmt)
+                self.mem_map[stmt.name] = stmt
+
+        kernels: list[CudaKernel] = []
+        for entry in entries:
+            kernels.append(self.run_on_entry(entry))
+
+        return CudaModule(global_vars=globals, kernels=kernels)
 
     def enter_scope(self, block: ptx.ScopedBlock) -> None:
         """

@@ -46,11 +46,16 @@ class CudaLabel(KernelItem):
     name : str
 
 @dataclass
-@dataclass
 class CudaKernel:
+    name: str
     arguments: list[Tuple[Var, ptx.MemoryDecl]]
     var_decls: list[Var]
     body: list[KernelItem]
+
+@dataclass
+class CudaModule:
+    global_vars : list[ptx.MemoryDecl]
+    kernels : list[CudaKernel]
 
 # Re-export MemoryDecl for convenience
 MemoryDecl = ptx.MemoryDecl

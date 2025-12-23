@@ -7,6 +7,7 @@ from parser import (
     MemoryDecl,
     MemoryType,
     MemoryRef,
+    MemorySymbol,
     ParamRef,
     Register,
     RegisterDecl,
@@ -125,6 +126,17 @@ def test_parse_instruction_hex_immediate_without_prefix():
     inst = parse_instruction("add.s32 %r1, %r2, 0f00000000;")
     assert isinstance(inst.operands[2], Immediate)
     assert inst.operands[2].value == int("0f00000000", 16)
+
+
+def test_parse_instruction_named_memory_with_map():
+    mem_map = {
+        "shared_memory": MemoryDecl(
+            alignment=None, datatype="u32", name="shared_memory", num_elements=1, memory_type=MemoryType.Shared
+        )
+    }
+    inst = parse_instruction("mov.u32 %r1, shared_memory;", mem_map=mem_map)
+    assert isinstance(inst.operands[1], MemorySymbol)
+    assert inst.operands[1].name == "shared_memory"
 
 
 def test_parse_instruction_vector_and_mem_offset():

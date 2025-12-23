@@ -12,6 +12,7 @@ from ptx import (
     Label,
     MemoryDecl,
     MemoryRef,
+    MemorySymbol,
     MemoryType,
     Module,
     Opaque,
@@ -180,7 +181,7 @@ def _split_operands(operand_text: str) -> list[str]:
     return parts
 
 
-def _parse_operand(token: str) -> Operand:
+def _parse_operand(token: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> Operand:
     if token.startswith("{") and token.endswith("}"):
         inner = token[1:-1]
         regs = [_parse_register(part.strip()) for part in inner.split(",") if part.strip()]
@@ -212,11 +213,15 @@ def _parse_operand(token: str) -> Operand:
     if re.match(r"^[0-9a-fA-F]+$", token):
         return Immediate(value=int(token, 16))
 
+    # If token matches a known memory symbol, treat as memory reference with zero offset
+    if mem_map and token in mem_map:
+        return MemorySymbol(name=token)
+
     # Fallback: treat as register (supports bare predicate regs like 'p')
     return _parse_register(token)
 
 
-def parse_instruction(line: str) -> Instruction:
+def parse_instruction(line: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> Instruction:
     """
     Parse a non-branch instruction line into an Instruction.
 
@@ -249,7 +254,7 @@ def parse_instruction(line: str) -> Instruction:
     operands: list[Operand] = []
     if operand_text.strip():
         for tok in _split_operands(operand_text.strip()):
-            operands.append(_parse_operand(tok))
+            operands.append(_parse_operand(tok, mem_map=mem_map))
 
     return Instruction(predicate=predicate, opcode=opcode, operands=operands)
 
@@ -341,7 +346,7 @@ def _brace_tokens(lines: list[str]) -> list[str]:
     return tokens
 
 
-def _process_statement(stmt: str, block: ScopedBlock) -> None:
+def _process_statement(stmt: str, block: ScopedBlock, mem_map: Optional[dict[str, MemoryDecl]] = None) -> None:
     if not stmt:
         return
     if stmt.startswith(".pragma"):
@@ -362,10 +367,10 @@ def _process_statement(stmt: str, block: ScopedBlock) -> None:
         return
     except ValueError:
         pass
-    block.body.append(parse_instruction(stmt))
+    block.body.append(parse_instruction(stmt, mem_map=mem_map))
 
 
-def parse_scoped_block(text: str) -> ScopedBlock:
+def parse_scoped_block(text: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> ScopedBlock:
     """
     Parse a scoped block text (which may contain nested braces) into a ScopedBlock tree.
     Braces can appear inline with other statements.
@@ -391,7 +396,7 @@ def parse_scoped_block(text: str) -> ScopedBlock:
         for stmt in tok.split(";"):
             cleaned = stmt.strip()
             if cleaned:
-                _process_statement(cleaned, current)
+                _process_statement(cleaned, current, mem_map=mem_map)
 
     if len(stack) != 1:
         raise ValueError("Unclosed block: missing closing brace(s)")
@@ -399,7 +404,7 @@ def parse_scoped_block(text: str) -> ScopedBlock:
     return root
 
 
-def parse_entry_directive(text: str) -> EntryDirective:
+def parse_entry_directive(text: str, mem_map: Optional[dict[str, MemoryDecl]] = None) -> EntryDirective:
     """
     Parse an .entry directive (including its parameter list and scoped body).
     """
@@ -437,7 +442,7 @@ def parse_entry_directive(text: str) -> EntryDirective:
             continue
         directives.append(Opaque(content=cleaned))
 
-    body = parse_scoped_block(body_block_text)
+    body = parse_scoped_block(body_block_text, mem_map=mem_map)
 
     return EntryDirective(name=name, params=params, directives=directives, body=body)
 
@@ -447,6 +452,7 @@ def parse_module(text: str) -> Module:
     Parse a PTX module text into a Module of statements (MemoryDecls and EntryDirectives).
     """
     statements: list[Statement] = []
+    mem_map: dict[str, MemoryDecl] = {}
     in_entry = False
     entry_lines: list[str] = []
     brace_balance = 0
@@ -461,7 +467,7 @@ def parse_module(text: str) -> Module:
                 brace_balance = line.count("{") - line.count("}")
                 seen_body = line.count("{") > 0
                 if seen_body and brace_balance == 0:
-                    statements.append(parse_entry_directive("\n".join(entry_lines)))
+                    statements.append(parse_entry_directive("\n".join(entry_lines), mem_map=mem_map))
                     in_entry = False
                 continue
 
@@ -469,7 +475,9 @@ def parse_module(text: str) -> Module:
                 continue
             if stripped.startswith(".global") or stripped.startswith(".shared") or stripped.startswith(".extern"):
                 try:
-                    statements.append(parse_memory_directive(stripped))
+                    md = parse_memory_directive(stripped)
+                    statements.append(md)
+                    mem_map[md.name] = md
                     continue
                 except ValueError:
                     pass
@@ -480,7 +488,7 @@ def parse_module(text: str) -> Module:
             if line.count("{") > 0:
                 seen_body = True
             if seen_body and brace_balance == 0:
-                statements.append(parse_entry_directive("\n".join(entry_lines)))
+                statements.append(parse_entry_directive("\n".join(entry_lines), mem_map=mem_map))
                 in_entry = False
 
     if in_entry:
