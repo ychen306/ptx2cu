@@ -1,5 +1,6 @@
 import ptx
 from cudagen import Var
+from ptx import MemoryDecl, MemorySymbol, MemoryType
 from emission.inst import emit_inline_asm_string
 
 
@@ -83,3 +84,16 @@ def test_parse_and_emit_wgmma():
         s
         == 'asm volatile("{ .reg .pred %ptmp0; setp.ne.u32 %ptmp0, %18, 0; wgmma.mma_async.sync.aligned.m64n64k16.f16.f16.f16 {%0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15}, %16, %17, %ptmp0, 1, 1, 0, 0; }" : "+r"(r1253), "+r"(r1252), "+r"(r1251), "+r"(r1250), "+r"(r1249), "+r"(r1248), "+r"(r1247), "+r"(r1246), "+r"(r1245), "+r"(r1244), "+r"(r1243), "+r"(r1242), "+r"(r1241), "+r"(r1240), "+r"(r1239), "+r"(r1238) : "l"(rd86), "l"(rd91), "r"(p) : );'
     )
+
+
+def test_emit_inline_asm_string_with_memory_symbol():
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u32",
+        operands=[ptx.Register(prefix="r", idx=1), MemorySymbol(decl=mem_decl)],
+    )
+    s = emit_inline_asm_string(instr, regmap)
+    assert 'mov.u32 %0, %1;' in s
+    assert '"r"(&shared_memory)' in s

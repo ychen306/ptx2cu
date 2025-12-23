@@ -136,7 +136,7 @@ def test_parse_instruction_named_memory_with_map():
     }
     inst = parse_instruction("mov.u32 %r1, shared_memory;", mem_map=mem_map)
     assert isinstance(inst.operands[1], MemorySymbol)
-    assert inst.operands[1].name == "shared_memory"
+    assert inst.operands[1].decl.name == "shared_memory"
 
 
 def test_parse_module_with_named_memory_operand_end_to_end():
@@ -158,7 +158,7 @@ def test_parse_module_with_named_memory_operand_end_to_end():
     instr = inner_block.body[0]
     assert isinstance(instr, Instruction)
     assert isinstance(instr.operands[1], MemorySymbol)
-    assert instr.operands[1].name == "shared_memory"
+    assert instr.operands[1].decl.name == "shared_memory"
 
 
 def test_parse_instruction_vector_and_mem_offset():

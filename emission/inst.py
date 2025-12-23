@@ -5,7 +5,7 @@ from typing import Mapping
 import ptx
 
 from cudagen.render_inst import emit_inline_asm
-from cudagen.types import Var
+from cudagen.types import Var, Expr, AddressOf
 
 
 def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> str:
@@ -17,9 +17,12 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
     def escape(s: str) -> str:
         return s.replace("\\", "\\\\").replace('"', '\\"')
 
-    placeholder_for_var = {var: f"%{idx}" for idx, var in enumerate(inline.arguments + inline.outputs)}
+    placeholder_for_var = {
+        var: f"%{idx}"
+        for idx, var in enumerate([v for v in inline.arguments + inline.outputs if isinstance(v, Var)])
+    }
 
-    pred_vars = [var for var in placeholder_for_var if var.represents_predicate]
+    pred_vars = [var for var in placeholder_for_var if isinstance(var, Var) and var.represents_predicate]
 
     final_template = inline.template
     pre_lines: list[str] = []
@@ -49,19 +52,30 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
         template_parts = ["{"] + pre_lines + [main_template] + post_lines + ["}"]
         final_template = " ".join(template_parts)
 
-    def constraint_for(var: Var) -> str:
-        if var.is_float:
-            if var.bitwidth == 64:
-                return "d"
-            return "f"
-        if var.bitwidth == 64:
-            return "l"
-        if var.bitwidth == 32:
+    def constraint_for(expr: Expr) -> str:
+        if isinstance(expr, Var):
+            if expr.is_float:
+                if expr.bitwidth == 64:
+                    return "d"
+                return "f"
+            if expr.bitwidth == 64:
+                return "l"
+            if expr.bitwidth == 32:
+                return "r"
+            if expr.bitwidth == 16:
+                return "h"
+            if expr.bitwidth == 8:
+                return "b"
             return "r"
-        if var.bitwidth == 16:
-            return "h"
-        if var.bitwidth == 8:
-            return "b"
+        if isinstance(expr, AddressOf):
+            bw = expr.bitwidth or 64
+            if bw == 32:
+                return "r"
+            if bw == 16:
+                return "h"
+            if bw == 8:
+                return "b"
+            return "l"
         return "r"
 
     outputs = []
@@ -71,10 +85,14 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: Mapping[ptx.Register,
 
     inputs = []
     for arg in inline.arguments:
-        if arg in inline.outputs:
-            continue
-        c = constraint_for(arg)
-        inputs.append(f'"{c}"({arg.name})')
+        if isinstance(arg, Var):
+            if arg in inline.outputs:
+                continue
+            c = constraint_for(arg)
+            inputs.append(f'"{c}"({arg.name})')
+        elif isinstance(arg, AddressOf):
+            c = constraint_for(arg)
+            inputs.append(f'"{c}"(&{arg.symbol.decl.name})')
 
     clobbers = ['"memory"'] if inline.clobbers_memory else []
 

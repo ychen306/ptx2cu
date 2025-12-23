@@ -5,9 +5,12 @@ from typing import Optional, Tuple, List
 from abc import ABC
 import ptx
 
+# cuda expression
+class Expr(ABC):
+    pass
 
 @dataclass(frozen=True)
-class Var:
+class Var(Expr):
     name: str
     bitwidth: int
     is_float: bool
@@ -16,11 +19,16 @@ class Var:
 class KernelItem(ABC):
     pass
 
+@dataclass
+class AddressOf(Expr):
+    symbol: ptx.MemorySymbol
+    bitwidth : Optional[int]
+
 
 @dataclass
 class InlineAsm(KernelItem):
     template: str
-    arguments: list[Var]
+    arguments: list[Expr]
     outputs: list[Var]
     clobbers_memory: bool = False
 

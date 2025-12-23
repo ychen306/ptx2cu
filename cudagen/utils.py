@@ -2,7 +2,7 @@ from typing import Mapping
 
 import ptx
 
-from .types import Var
+from .types import Var, Expr, AddressOf
 
 
 def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
@@ -19,7 +19,7 @@ def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
 def render_operand_with_index(
     operand: ptx.Operand,
     regmap: Mapping[ptx.Register, Var],
-    args: list[Var],
+    args: list[Expr],
     idx: int,
 ) -> tuple[str, int]:
     if isinstance(operand, ptx.Register):
@@ -43,7 +43,9 @@ def render_operand_with_index(
             return f"[{base_rendered}+{operand.offset}]", next_idx
         return f"[{base_rendered}]", next_idx
     if isinstance(operand, ptx.MemorySymbol):
-        return operand.name, idx
+        addr = AddressOf(symbol=operand, bitwidth=None)
+        args.append(addr)
+        return f"%{len(args)-1}", idx + 1
     if isinstance(operand, ptx.ParamRef):
         return operand.name, idx
     raise ValueError(f"Unsupported operand type: {type(operand).__name__}")

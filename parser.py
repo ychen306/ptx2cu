@@ -220,7 +220,7 @@ def _parse_operand(token: str, mem_map: Optional[dict[str, MemoryDecl]] = None) 
 
     # If token matches a known memory symbol, treat as memory reference with zero offset
     if mem_map and token in mem_map:
-        return MemorySymbol(name=token)
+        return MemorySymbol(decl=mem_map[token])
 
     # Fallback: treat as register (supports bare predicate regs like 'p')
     return _parse_register(token)

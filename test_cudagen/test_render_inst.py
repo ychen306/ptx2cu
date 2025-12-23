@@ -2,6 +2,7 @@ import pytest
 
 import ptx
 from cudagen import InlineAsm, Var, emit_inline_asm
+from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 
 def test_emit_inline_asm_basic():
@@ -88,3 +89,20 @@ def test_emit_inline_asm_wgmma_vector():
     )
     asm = emit_inline_asm(instr, regmap)
     assert asm.template.startswith("wgmma.mma_async.sync.aligned")
+
+
+def test_emit_inline_asm_with_memory_symbol():
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            MemorySymbol(decl=mem_decl),
+        ],
+    )
+    asm = emit_inline_asm(instr, regmap)
+    assert asm.template == "mov.u32 %0, %1;"
+    assert asm.arguments[1].symbol.decl is mem_decl
+    assert asm.arguments[1].bitwidth == 32

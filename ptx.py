@@ -72,7 +72,7 @@ class MemoryRef(Operand):
 
 @dataclass(frozen=True)
 class MemorySymbol(Operand):
-    name: str
+    decl: MemoryDecl
 
 @dataclass
 class Instruction(InstructionBase):

@@ -4,7 +4,9 @@ import ptx
 
 from typing import Mapping
 
-from .types import InlineAsm, Var
+import re
+
+from .types import InlineAsm, Var, Expr, AddressOf
 from .utils import collect_registers, render_operand_with_index
 
 
@@ -21,6 +23,13 @@ def get_output_registers(instr: ptx.Instruction) -> list[ptx.Register]:
     return []
 
 
+def _opcode_bitwidth(opcode: str) -> Optional[int]:
+    m = re.findall(r"\.(?:b|s|u|f)(\d+)", opcode)
+    if not m:
+        return None
+    return int(m[-1])
+
+
 def emit_inline_asm(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> InlineAsm:
     """
     Emit an InlineAsm for a PTX Instruction using a register-to-Var mapping.
@@ -31,12 +40,18 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) 
     - InlineAsm.arguments are the Vars in placeholder order; outputs are the Vars for the
       selected output registers (if any).
     """
-    args: list[Var] = []
+    args: list[Expr] = []
     idx = 0
     rendered_ops: list[str] = []
     for op in instr.operands:
         rendered, idx = render_operand_with_index(op, regmap, args, idx)
         rendered_ops.append(rendered)
+
+    op_bw = _opcode_bitwidth(instr.opcode)
+    if op_bw and op_bw != 64:
+        for arg in args:
+            if isinstance(arg, AddressOf) and arg.bitwidth is None:
+                arg.bitwidth = op_bw
 
     out_regs = get_output_registers(instr)
     out_vars: list[Var] = []
