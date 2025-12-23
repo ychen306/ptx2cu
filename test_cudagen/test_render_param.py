@@ -16,7 +16,7 @@ def test_emit_ld_param_scalar():
     param_map = {
         "p0": MemoryDecl(
             alignment=None,
-            datatype="u32",
+            datatype="u64",
             name="p0",
             num_elements=1,
             memory_type=ptx.MemoryType.Param,
@@ -52,3 +52,28 @@ def test_emit_ld_param_array_offset():
     assert load.dst == Var("r2", 32, False)
     assert load.src == Var("arr", 16, True)
     assert load.offset == 4
+
+
+def test_emit_ld_param_opcode_bitwidth_overrides_decl():
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="ld.param.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=3),
+            ptx.MemoryRef(base=ptx.ParamRef(name="buf"), offset=0),
+        ],
+    )
+    regmap = {ptx.Register(prefix="r", idx=3): Var("r3", 32, False)}
+    param_map = {
+        "buf": MemoryDecl(
+            alignment=None,
+            datatype="b8",
+            name="buf",
+            num_elements=8,
+            memory_type=ptx.MemoryType.Param,
+        )
+    }
+    load = emit_ld_param(instr, regmap, param_map)
+    # Even though the decl is bytes, opcode says u32
+    assert load.bitwidth == 32
+    assert load.is_float is False

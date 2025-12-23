@@ -4,7 +4,7 @@ from typing import Mapping
 
 import ptx
 
-from .datatype import type_info_for_datatype
+from .datatype import type_info_for_datatype, ctype_for_datatype
 from .types import Load, MemoryDecl, Var
 
 
@@ -37,7 +37,10 @@ def emit_ld_param(
     if decl.memory_type != ptx.MemoryType.Param:
         raise ValueError("emit_ld_param only supports param memory")
 
-    ctype, bitwidth, is_float = type_info_for_datatype(decl.datatype)
+    # Determine bitwidth/is_float from opcode suffix if present
+    op_suffix = instr.opcode.split(".")[-1]
+    opcode_type = op_suffix if op_suffix != "param" else decl.datatype
+    _, bitwidth, is_float = type_info_for_datatype(opcode_type)
     size = bitwidth // 8
     offset = src.offset or 0
     if offset % size != 0:
@@ -49,9 +52,7 @@ def emit_ld_param(
         raise ValueError(f"Missing mapping for dest register {dest}")
     lhs = dest_var
 
-    src_var = Var(
-        name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False
-    )
+    src_var = Var(name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
 
     return Load(
         bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset
