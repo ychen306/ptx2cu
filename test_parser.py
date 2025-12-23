@@ -139,6 +139,28 @@ def test_parse_instruction_named_memory_with_map():
     assert inst.operands[1].name == "shared_memory"
 
 
+def test_parse_module_with_named_memory_operand_end_to_end():
+    text = """
+.shared .u32 shared_memory;
+.entry foo() {
+    mov.u32 %r1, shared_memory;
+}
+"""
+    mod = parse_module(text)
+    assert len(mod.statements) == 2
+    mem_decl, entry = mod.statements
+    assert isinstance(mem_decl, MemoryDecl)
+    assert mem_decl.name == "shared_memory"
+    assert isinstance(entry, EntryDirective)
+    assert entry.name == "foo"
+    # The instruction inside the entry should use MemorySymbol
+    inner_block = entry.body.body[0]
+    instr = inner_block.body[0]
+    assert isinstance(instr, Instruction)
+    assert isinstance(instr.operands[1], MemorySymbol)
+    assert instr.operands[1].name == "shared_memory"
+
+
 def test_parse_instruction_vector_and_mem_offset():
     inst = parse_instruction("st.global.v2.u32 [%rd1+16], {%r2,%r3}")
     assert inst == Instruction(
