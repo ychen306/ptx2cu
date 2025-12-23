@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from abc import ABC
 import ptx
 
@@ -49,7 +49,6 @@ class CudaLabel(KernelItem):
 @dataclass
 class CudaKernel:
     arguments: list[Tuple[Var, ptx.MemoryDecl]]
-    # this include kernel arguments (i.e., params)
     var_decls: list[Var]
     body: list[KernelItem]
 
