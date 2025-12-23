@@ -4,17 +4,13 @@ from typing import Mapping
 
 import ptx
 
-from cudagen.render_inst import emit_inline_asm
-from cudagen.types import Var, Expr, AddressOf
+from cudagen.types import Var, Expr, AddressOf, InlineAsm as IRInlineAsm
 
 
-def emit_inline_asm_string(
-    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
-) -> str:
+def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
     """
-    Emit a CUDA asm volatile string for a PTX instruction.
+    Emit a CUDA asm volatile string from an InlineAsm IR node.
     """
-    inline = emit_inline_asm(instr, regmap)
 
     def escape(s: str) -> str:
         return s.replace("\\", "\\\\").replace('"', '\\"')
