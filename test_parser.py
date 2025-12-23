@@ -178,6 +178,16 @@ def test_parse_module_with_named_memory_operand_end_to_end():
     assert instr.operands[1].decl.name == "shared_memory"
 
 
+def test_parse_instruction_cp_async_not_label():
+    inst = parse_instruction("cp.async.ca.shared.global.L2::128B [%r147], [%rd10], 16;")
+    assert inst.opcode == "cp.async.ca.shared.global.L2::128B"
+    assert len(inst.operands) == 3
+    assert isinstance(inst.operands[0], MemoryRef)
+    assert inst.operands[0].offset == 0
+    assert isinstance(inst.operands[1], MemoryRef)
+    assert isinstance(inst.operands[2], Immediate)
+
+
 def test_parse_instruction_vector_and_mem_offset():
     inst = parse_instruction("st.global.v2.u32 [%rd1+16], {%r2,%r3}")
     assert inst == Instruction(

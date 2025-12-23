@@ -20,10 +20,10 @@ def declare_memory(mem: MemoryDecl) -> str:
     else:
         scope_kw = "__device__"
 
-    extern_kw = "extern " if mem.num_elements == 0 else ""
     align_kw = f"__align__({mem.alignment}) " if mem.alignment else ""
     ctype = ctype_for_datatype(mem.datatype)
 
     size_part = "[]" if mem.num_elements == 0 else f"[{mem.num_elements}]"
 
-    return f"{extern_kw}{scope_kw} {align_kw}{ctype} {mem.name}{size_part};"
+    extern_kw = "extern " if mem.num_elements == 0 else ""
+    return f'{extern_kw}extern "C" {scope_kw} {align_kw}{ctype} {mem.name}{size_part};'

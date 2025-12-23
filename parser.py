@@ -365,7 +365,7 @@ def _process_statement(
     if stmt.startswith(".pragma"):
         # Skip pragmas inside blocks
         return
-    label_match = re.match(r"^([^:]+):\s*(.*)$", stmt)
+    label_match = re.match(r"^(?!.*::)([^:]+):\s*(.*)$", stmt)
     if label_match:
         name, rest = label_match.group(1), label_match.group(2)
         block.body.append(parse_label(f"{name}:"))

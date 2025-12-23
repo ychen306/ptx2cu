@@ -20,7 +20,7 @@ def test_emit_kernel_simple():
     )
     out = emit_kernel(kernel)
     expected = (
-        "__global__ void k(unsigned int p0)\n"
+        "extern \"C\" __global__ void k(unsigned int p0)\n"
         "{\n"
         "  unsigned int r0;\n"
         "  r0 = reinterpret_cast<unsigned int*>(&p0)[0];\n"
