@@ -61,6 +61,10 @@ class CudaBranch(KernelItem):
 class CudaLabel(KernelItem):
     name: str
 
+@dataclass
+class Return(KernelItem):
+    pass
+
 
 @dataclass
 class CudaKernel:

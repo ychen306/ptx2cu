@@ -1,7 +1,7 @@
 import ptx
 
 from cudagen import CudaGen, Var
-from cudagen.types import InlineAsm, Load, CudaBranch, CudaLabel
+from cudagen.types import InlineAsm, Load, CudaBranch, CudaLabel, Return
 
 
 def test_run_entry_lowering():
@@ -41,6 +41,7 @@ def test_run_entry_lowering():
                 ptx.Branch(
                     predicate=None, is_uniform=False, target=ptx.Label(name="L0")
                 ),
+                ptx.Instruction(predicate=None, opcode="ret", operands=[]),
             ],
         ),
     )
@@ -58,11 +59,12 @@ def test_run_entry_lowering():
     # Special registers are not in var_decls but available in reg_map
     assert ptx.Register(prefix="ctaid.x", idx=None) in gen.reg_map
     assert gen.reg_map[ptx.Register(prefix="ctaid.x", idx=None)].name == "blockIdx.x"
-    # Body contains Load, Label, InlineAsm, CudaBranch in order
+    # Body contains Load, Label, InlineAsm, CudaBranch, Return in order
     assert isinstance(kernel.body[0], Load)
     assert isinstance(kernel.body[1], CudaLabel)
     assert isinstance(kernel.body[2], InlineAsm)
     assert isinstance(kernel.body[3], CudaBranch)
+    assert isinstance(kernel.body[4], Return)
 
 
 def test_special_registers_seeded_and_usable_in_inline_asm():

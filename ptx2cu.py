@@ -7,6 +7,7 @@ from pathlib import Path
 
 from parser import parse_module
 from cudagen import CudaGen
+from emission import emit_cuda_module
 
 
 def main() -> None:
@@ -19,11 +20,10 @@ def main() -> None:
     gen = CudaGen()
     cuda_module = gen.run(module)
 
-    # For now, just print a summary count and kernel info
-    print(
-        f"Parsed module with {len(module.statements)} statements from {args.ptx_file}; "
-        f"lowered {len(cuda_module.kernels)} kernel(s)"
-    )
+    cuda_src = emit_cuda_module(cuda_module)
+
+    # For now, just print the generated CUDA source
+    print(cuda_src)
 
 
 if __name__ == "__main__":

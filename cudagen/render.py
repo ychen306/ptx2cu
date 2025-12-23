@@ -5,7 +5,7 @@ from typing import List
 
 import ptx
 
-from .types import CudaKernel, CudaLabel, Var, CudaModule
+from .types import CudaKernel, CudaLabel, Var, CudaModule, Return
 from .render_branch import emit_branch
 from .render_inst import emit_inline_asm
 from .render_param import emit_ld_param
@@ -101,6 +101,9 @@ class CudaGen:
             elif isinstance(node, ptx.Branch):
                 items.append(emit_branch(node, self.reg_map))
             elif isinstance(node, ptx.Instruction):
+                if node.opcode == "ret":
+                    items.append(Return())
+                    continue
                 if node.opcode.startswith("ld.param"):
                     items.append(emit_ld_param(node, self.reg_map, self.param_map))
                 else:
