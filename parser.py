@@ -77,7 +77,7 @@ def parse_param_directive(line: str) -> MemoryDecl:
         r"(?:\.align\s+(?P<align>\d+)\s+)?"
         r"(?P<dtype>\.\S+)\s+"
         r"(?P<name>[^\s\[]+)"
-        r"(?:\[(?P<count>\d+)\])?"
+        r"(?:\[(?P<count>\d*)\])?"
         r"$"
     )
     m = re.match(pattern, cleaned)
@@ -115,7 +115,7 @@ def parse_memory_directive(line: str) -> MemoryDecl:
         r"(?:\.align\s+(?P<align>\d+)\s+)?"
         r"(?P<dtype>\.\S+)\s+"
         r"(?P<name>[^\s\[]+)"
-        r"(?:\[(?P<count>\d+)\])?"
+        r"(?:\[(?P<count>\d*)\])?"
         r"$"
     )
     m = re.match(pattern, cleaned)
@@ -131,7 +131,12 @@ def parse_memory_directive(line: str) -> MemoryDecl:
     count = m.group("count")
 
     alignment = int(raw_align) if raw_align else None
-    num_elements = int(count) if count else 1
+    if count is None:
+        num_elements = 1
+    elif count == "":
+        num_elements = 0
+    else:
+        num_elements = int(count)
 
     return MemoryDecl(
         alignment=alignment,

@@ -42,6 +42,8 @@ def render_operand_with_index(
         if operand.offset:
             return f"[{base_rendered}+{operand.offset}]", next_idx
         return f"[{base_rendered}]", next_idx
+    if isinstance(operand, ptx.MemorySymbol):
+        return operand.name, idx
     if isinstance(operand, ptx.ParamRef):
         return operand.name, idx
     raise ValueError(f"Unsupported operand type: {type(operand).__name__}")
