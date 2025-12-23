@@ -5,6 +5,7 @@ from .kernel_body import emit_kernel
 from .branch import emit_branch_string
 from .memory import declare_memory
 from .local import declare_local
+from .module import emit_cuda_module
 
 __all__ = [
     "emit_branch_string",
@@ -15,4 +16,5 @@ __all__ = [
     "emit_kernel",
     "declare_memory",
     "declare_local",
+    "emit_cuda_module",
 ]
