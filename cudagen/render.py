@@ -89,22 +89,20 @@ class CudaGen:
         Recursively walk a ScopedBlock and append lowered KernelItems to items.
         """
         self.enter_scope(block)
-        try:
-            for node in block.body:
-                if isinstance(node, ptx.Label):
-                    items.append(CudaLabel(name=node.name))
-                elif isinstance(node, ptx.Branch):
-                    items.append(emit_branch(node, self.reg_map))
-                elif isinstance(node, ptx.Instruction):
-                    if node.opcode.startswith("ld.param"):
-                        items.append(emit_ld_param(node, self.reg_map, self.param_map))
-                    else:
-                        items.append(emit_inline_asm(node, self.reg_map))
-                elif isinstance(node, ptx.ScopedBlock):
-                    self._walk_block(node, items)
-                # ignore other directive/opaque nodes for now
-        finally:
-            self.exit_scope()
+        for node in block.body:
+            if isinstance(node, ptx.Label):
+                items.append(CudaLabel(name=node.name))
+            elif isinstance(node, ptx.Branch):
+                items.append(emit_branch(node, self.reg_map))
+            elif isinstance(node, ptx.Instruction):
+                if node.opcode.startswith("ld.param"):
+                    items.append(emit_ld_param(node, self.reg_map, self.param_map))
+                else:
+                    items.append(emit_inline_asm(node, self.reg_map))
+            elif isinstance(node, ptx.ScopedBlock):
+                self._walk_block(node, items)
+            # ignore other directive/opaque nodes for now
+        self.exit_scope()
 
     def run(self, entry: ptx.EntryDirective) -> "CudaKernel":
         """
