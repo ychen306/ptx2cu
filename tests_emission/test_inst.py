@@ -94,6 +94,29 @@ def test_emit_inline_asm_string_with_memory_symbol():
         opcode="mov.u32",
         operands=[ptx.Register(prefix="r", idx=1), MemorySymbol(decl=mem_decl)],
     )
+    from cudagen.render_inst import emit_inline_asm
+    asm_ir = emit_inline_asm(instr, regmap)
     s = emit_inline_asm_string(instr, regmap)
-    assert 'mov.u32 %0, %1;' in s
-    assert '"r"(&shared_memory)' in s
+    assert (
+        s
+        == 'asm volatile("{ .reg .u64 %ptr64_0; .reg .u32 %ptr32_0; cvta.shared.u64 %ptr64_0, %1; cvt.u32.u64 %ptr32_0, %ptr64_0; mov.u32 %0, %ptr32_0; }" : "+r"(r1) : "l"(&shared_memory) : );'
+    )
+
+
+def test_emit_inline_asm_string_with_memory_symbol_32bit_addr():
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    mem_decl = MemoryDecl(alignment=None, datatype="u32", name="shared_memory", num_elements=0, memory_type=MemoryType.Shared)
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u32",
+        operands=[ptx.Register(prefix="r", idx=1), MemorySymbol(decl=mem_decl)],
+    )
+    from cudagen.render_inst import emit_inline_asm
+    asm_ir = emit_inline_asm(instr, regmap)
+    # Manually tweak AddressOf bitwidth to exercise downcast path
+    for arg in asm_ir.arguments:
+        if hasattr(arg, "symbol"):
+            arg.bitwidth = 32
+    s = emit_inline_asm_string(instr, regmap)
+    assert "cvta.shared.u64" in s
+    assert "cvt.u32.u64" in s
