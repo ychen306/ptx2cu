@@ -3,10 +3,10 @@ from __future__ import annotations
 import ptx
 
 from cudagen.render_inst import emit_inline_asm
-from cudagen.types import RegisterInfo, Var
+from cudagen.types import Var
 
 
-def emit_inline_asm_string(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterInfo]) -> str:
+def emit_inline_asm_string(instr: ptx.Instruction, regmap: dict[ptx.Register, Var]) -> str:
     """
     Emit a CUDA asm volatile string for a PTX instruction.
     """
@@ -15,14 +15,9 @@ def emit_inline_asm_string(instr: ptx.Instruction, regmap: dict[ptx.Register, Re
     def escape(s: str) -> str:
         return s.replace("\\", "\\\\").replace('"', '\\"')
 
-    var_to_decl = {info.c_var: info.decl for info in regmap.values()}
     placeholder_for_var = {var: f"%{idx}" for idx, var in enumerate(inline.arguments + inline.outputs)}
 
-    pred_vars = {
-        var: decl
-        for var, decl in var_to_decl.items()
-        if var.represents_predicate
-    }
+    pred_vars = [var for var in placeholder_for_var if var.represents_predicate]
 
     final_template = inline.template
     pre_lines: list[str] = []

@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import ptx
-
 
 @dataclass(frozen=True)
 class Var:
@@ -12,12 +10,6 @@ class Var:
     bitwidth: int
     is_float: bool
     represents_predicate: bool = False
-
-
-@dataclass
-class RegisterInfo:
-    decl: ptx.RegisterDecl
-    c_var: Var
 
 
 @dataclass
@@ -50,4 +42,5 @@ class CudaLabel:
 
 
 # Re-export MemoryDecl for convenience
+import ptx
 MemoryDecl = ptx.MemoryDecl

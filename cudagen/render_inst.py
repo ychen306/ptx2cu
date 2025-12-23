@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ptx
 
-from .types import InlineAsm, RegisterInfo, Var
+from .types import InlineAsm, Var
 from .utils import collect_registers, render_operand_with_index
 
 
@@ -19,7 +19,7 @@ def get_output_registers(instr: ptx.Instruction) -> list[ptx.Register]:
     return []
 
 
-def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterInfo]) -> InlineAsm:
+def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, Var]) -> InlineAsm:
     """
     Emit an InlineAsm for a PTX Instruction using a register-to-Var mapping.
 
@@ -39,9 +39,9 @@ def emit_inline_asm(instr: ptx.Instruction, regmap: dict[ptx.Register, RegisterI
     out_regs = get_output_registers(instr)
     out_vars: list[Var] = []
     for r in out_regs:
-        info = regmap.get(r)
-        if info:
-            out_vars.append(info.c_var)
+        var = regmap.get(r)
+        if var:
+            out_vars.append(var)
 
     template = f"{instr.opcode} " + ", ".join(rendered_ops) + ";"
 

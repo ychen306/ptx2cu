@@ -1,6 +1,6 @@
 import ptx
 from cudagen import Load, emit_ld_param
-from cudagen.types import MemoryDecl, RegisterInfo, Var
+from cudagen.types import MemoryDecl, Var
 
 
 def test_emit_ld_param_scalar():
@@ -13,9 +13,7 @@ def test_emit_ld_param_scalar():
         ],
     )
     regmap = {
-        ptx.Register(prefix="r", idx=1): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r1", 32, False)
-        )
+        ptx.Register(prefix="r", idx=1): Var("r1", 32, False)
     }
     param_map = {
         "p0": MemoryDecl(alignment=None, datatype="u32", name="p0", num_elements=1, memory_type=ptx.MemoryType.Param)
@@ -37,9 +35,7 @@ def test_emit_ld_param_array_offset():
         ],
     )
     regmap = {
-        ptx.Register(prefix="r", idx=2): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b16", prefix="r", num_regs=1), c_var=Var("r2", 32, False)
-        )
+        ptx.Register(prefix="r", idx=2): Var("r2", 32, False)
     }
     param_map = {
         "arr": MemoryDecl(alignment=None, datatype="f16", name="arr", num_elements=4, memory_type=ptx.MemoryType.Param)

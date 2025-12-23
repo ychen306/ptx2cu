@@ -1,16 +1,12 @@
 import ptx
-from cudagen import RegisterInfo, Var
+from cudagen import Var
 from emission.inst import emit_inline_asm_string
 
 
 def test_emit_inline_asm_string_basic():
     regmap = {
-        ptx.Register(prefix="r", idx=1): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r1", 32, False)
-        ),
-        ptx.Register(prefix="r", idx=2): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r2", 32, False)
-        ),
+        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
+        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
     }
     instr = ptx.Instruction(
         predicate=None,
@@ -31,24 +27,16 @@ def test_emit_inline_asm_string_basic():
 def test_emit_inline_asm_string_wgmma():
     regs = [ptx.Register(prefix="r", idx=i) for i in range(1, 5)]
     regmap = {
-        r: RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var(f"{r.prefix}{r.idx}", 32, False)
-        )
+        r: Var(f"{r.prefix}{r.idx}", 32, False)
         for r in regs
     }
     regmap.update(
         {
-            ptx.Register(prefix="rd", idx=74): RegisterInfo(
-                decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd74", 64, False)
-            ),
-            ptx.Register(prefix="rd", idx=79): RegisterInfo(
-                decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd79", 64, False)
-            ),
+            ptx.Register(prefix="rd", idx=74): Var("rd74", 64, False),
+            ptx.Register(prefix="rd", idx=79): Var("rd79", 64, False),
         }
     )
-    regmap[ptx.Register(prefix="p", idx=None)] = RegisterInfo(
-        decl=ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1), c_var=Var("p", 32, False, True)
-    )
+    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
 
     instr = ptx.Instruction(
         predicate=None,
@@ -83,20 +71,12 @@ def test_parse_and_emit_wgmma():
     instr = parse_instruction(line)
     regs = list(instr.operands[0].values)
     regmap = {
-        r: RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var(f"{r.prefix}{r.idx}", 32, False)
-        )
+        r: Var(f"{r.prefix}{r.idx}", 32, False)
         for r in regs
     }
-    regmap[ptx.Register(prefix="rd", idx=86)] = RegisterInfo(
-        decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd86", 64, False)
-    )
-    regmap[ptx.Register(prefix="rd", idx=91)] = RegisterInfo(
-        decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd91", 64, False)
-    )
-    regmap[ptx.Register(prefix="p", idx=None)] = RegisterInfo(
-        decl=ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1), c_var=Var("p", 32, False, True)
-    )
+    regmap[ptx.Register(prefix="rd", idx=86)] = Var("rd86", 64, False)
+    regmap[ptx.Register(prefix="rd", idx=91)] = Var("rd91", 64, False)
+    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
 
     s = emit_inline_asm_string(instr, regmap)
     assert (

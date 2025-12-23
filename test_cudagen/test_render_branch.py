@@ -1,6 +1,6 @@
 import ptx
 import pytest
-from cudagen import CudaBranch, CudaLabel, RegisterInfo, Var, emit_branch
+from cudagen import CudaBranch, CudaLabel, Var, emit_branch
 
 
 def test_emit_branch_unconditional():
@@ -14,10 +14,7 @@ def test_emit_branch_predicated():
     pred = ptx.Register(prefix="p", idx=1)
     br = ptx.Branch(predicate=pred, is_uniform=True, target=ptx.Label(name="L2"))
     regmap = {
-        pred: RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1),
-            c_var=Var("p1", 32, False, True),
-        )
+        pred: Var("p1", 32, False, True)
     }
     out = emit_branch(br, regmap)
     assert out == CudaBranch(cond=Var("p1", 32, False, True), target=CudaLabel(name="L2"))
@@ -28,10 +25,7 @@ def test_emit_branch_predicated_without_percent():
     pred = ptx.Register(prefix="p", idx=None)
     br = ptx.Branch(predicate=pred, is_uniform=False, target=ptx.Label(name="L3"))
     regmap = {
-        pred: RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1),
-            c_var=Var("p", 32, False, True),
-        )
+        pred: Var("p", 32, False, True)
     }
     out = emit_branch(br, regmap)
     assert out == CudaBranch(cond=Var("p", 32, False, True), target=CudaLabel(name="L3"))

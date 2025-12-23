@@ -4,12 +4,12 @@ from __future__ import annotations
 import ptx
 
 from .datatype import type_info_for_datatype
-from .types import Load, MemoryDecl, RegisterInfo, Var
+from .types import Load, MemoryDecl, Var
 
 
 def emit_ld_param(
     instr: ptx.Instruction,
-    regmap: dict[ptx.Register, RegisterInfo],
+    regmap: dict[ptx.Register, Var],
     param_map: dict[str, MemoryDecl],
 ) -> Load:
     """
@@ -41,10 +41,10 @@ def emit_ld_param(
         raise ValueError(f"Offset {offset} not aligned to {size}-byte element")
     index = offset // size
 
-    dest_info = regmap.get(dest)
-    if dest_info is None:
+    dest_var = regmap.get(dest)
+    if dest_var is None:
         raise ValueError(f"Missing mapping for dest register {dest}")
-    lhs = dest_info.c_var
+    lhs = dest_var
 
     src_var = Var(name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False)
 

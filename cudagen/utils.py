@@ -1,6 +1,6 @@
 import ptx
 
-from .types import RegisterInfo, Var
+from .types import Var
 
 
 def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
@@ -16,15 +16,15 @@ def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
 
 def render_operand_with_index(
     operand: ptx.Operand,
-    regmap: dict[ptx.Register, RegisterInfo],
+    regmap: dict[ptx.Register, Var],
     args: list[Var],
     idx: int,
 ) -> tuple[str, int]:
     if isinstance(operand, ptx.Register):
-        info = regmap.get(operand)
-        if info is None:
+        var = regmap.get(operand)
+        if var is None:
             raise ValueError(f"Missing mapping for register {operand}")
-        args.append(info.c_var)
+        args.append(var)
         return f"%{len(args)-1}", idx + 1
     if isinstance(operand, ptx.Vector):
         rendered = []

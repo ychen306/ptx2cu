@@ -1,17 +1,13 @@
 import pytest
 
 import ptx
-from cudagen import InlineAsm, RegisterInfo, Var, emit_inline_asm
+from cudagen import InlineAsm, Var, emit_inline_asm
 
 
 def test_emit_inline_asm_basic():
     regmap = {
-        ptx.Register(prefix="r", idx=1): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r1", 32, False)
-        ),
-        ptx.Register(prefix="r", idx=2): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r2", 32, False)
-        ),
+        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
+        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
     }
     instr = ptx.Instruction(
         predicate=None,
@@ -31,15 +27,9 @@ def test_emit_inline_asm_basic():
 
 def test_emit_inline_asm_vector_and_memory():
     regmap = {
-        ptx.Register(prefix="r", idx=1): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r1", 32, False)
-        ),
-        ptx.Register(prefix="r", idx=2): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var("r2", 32, False)
-        ),
-        ptx.Register(prefix="rd", idx=0): RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd0", 64, False)
-        ),
+        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
+        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
+        ptx.Register(prefix="rd", idx=0): Var("rd0", 64, False),
     }
     instr = ptx.Instruction(
         predicate=None,
@@ -71,24 +61,16 @@ def test_emit_inline_asm_wgmma_vector():
     # Mirrors the wgmma operand structure tested in parser tests
     regs = [ptx.Register(prefix="r", idx=i) for i in range(1, 5)]
     regmap = {
-        r: RegisterInfo(
-            decl=ptx.RegisterDecl(datatype="b32", prefix="r", num_regs=1), c_var=Var(f"{r.prefix}{r.idx}", 32, False)
-        )
+        r: Var(f"{r.prefix}{r.idx}", 32, False)
         for r in regs
     }
     regmap.update(
         {
-            ptx.Register(prefix="rd", idx=74): RegisterInfo(
-                decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd74", 64, False)
-            ),
-            ptx.Register(prefix="rd", idx=79): RegisterInfo(
-                decl=ptx.RegisterDecl(datatype="b64", prefix="rd", num_regs=1), c_var=Var("rd79", 64, False)
-            ),
+            ptx.Register(prefix="rd", idx=74): Var("rd74", 64, False),
+            ptx.Register(prefix="rd", idx=79): Var("rd79", 64, False),
         }
     )
-    regmap[ptx.Register(prefix="p", idx=None)] = RegisterInfo(
-        decl=ptx.RegisterDecl(datatype="pred", prefix="p", num_regs=1), c_var=Var("p", 32, False, True)
-    )
+    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
 
     instr = ptx.Instruction(
         predicate=None,
