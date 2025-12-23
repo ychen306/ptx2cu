@@ -52,7 +52,7 @@ class Operand(ABC):
 
 @dataclass
 class Immediate(Operand):
-    value: int
+    value: str
 
 
 @dataclass

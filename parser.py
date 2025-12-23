@@ -218,9 +218,9 @@ def _parse_operand(
         return MemoryRef(base=base, offset=offset)
 
     if re.match(r"^-?(0x[0-9a-fA-F]+|\d+)$", token):
-        return Immediate(value=int(token, 0))
+        return Immediate(value=token)
     if re.match(r"^[0-9a-fA-F]+$", token):
-        return Immediate(value=int(token, 16))
+        return Immediate(value=token)
 
     # If token matches a known memory symbol, treat as memory reference with zero offset
     if mem_map and token in mem_map:
