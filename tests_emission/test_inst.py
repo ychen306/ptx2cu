@@ -153,3 +153,26 @@ def test_emit_inline_asm_string_predicate_placeholder_not_reused():
     assert s.count("%") >= 3  # placeholders exist
     # ensure no extra placeholder was generated for the predicate var
     assert "%3" not in s  # only %0-%2 should appear for three operands
+
+
+def test_emit_inline_asm_string_store_has_inputs_only():
+    regmap = {
+        ptx.Register(prefix="f", idx=4): Var("f4", 32, True),
+        ptx.Register(prefix="rd", idx=7): Var("rd7", 64, False),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="st.global.f32",
+        operands=[
+            ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=7), offset=0),
+            ptx.Register(prefix="f", idx=4),
+        ],
+    )
+    from cudagen.render_inst import emit_inline_asm
+
+    s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
+    # Expect both operands as inputs, no outputs
+    assert 'st.global.f32 [%0], %1;' in s
+    assert ':+f"(f4)' not in s
+    assert '"f"(f4)' in s
+    assert '"l"(rd7)' in s

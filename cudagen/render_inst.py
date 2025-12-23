@@ -14,12 +14,15 @@ def get_output_registers(instr: ptx.Instruction) -> list[ptx.Register]:
     """
     Return the first register operand(s), if any, as the output registers.
     If the first operand is a vector, return all its registers.
+    Store instructions (st.*) have no outputs.
     """
-    for op in instr.operands:
-        if isinstance(op, ptx.Register):
-            return [op]
-        if isinstance(op, ptx.Vector):
-            return list(op.values)
+    if instr.opcode.startswith("st."):
+        return []
+    first = instr.operands[0] if instr.operands else None
+    if isinstance(first, ptx.Register):
+        return [first]
+    if isinstance(first, ptx.Vector):
+        return list(first.values)
     return []
 
 
