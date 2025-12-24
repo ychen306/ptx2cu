@@ -18,6 +18,7 @@ class CudaType:
     bitwidth: int
     is_float: bool
     represents_predicate: bool = False
+    is_signed: bool = False
 
 
 @dataclass(frozen=True)

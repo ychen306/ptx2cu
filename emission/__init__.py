@@ -6,6 +6,7 @@ from .branch import emit_branch_string
 from .memory import declare_memory
 from .local import declare_local
 from .module import emit_cuda_module
+from .expr import emit_expr, emit_assignment_stmt
 
 __all__ = [
     "emit_branch_string",
@@ -17,4 +18,6 @@ __all__ = [
     "declare_memory",
     "declare_local",
     "emit_cuda_module",
+    "emit_expr",
+    "emit_assignment_stmt",
 ]
