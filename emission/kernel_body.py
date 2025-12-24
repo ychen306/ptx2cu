@@ -9,6 +9,7 @@ from cudagen.types import (
     CudaKernel,
     InlineAsm,
     Load,
+    Store,
     CudaBranch,
     CudaLabel,
     Return,
@@ -52,6 +53,10 @@ def emit_kernel(kernel: CudaKernel) -> str:
             lines.append(indent + emit_inline_asm_ir(item))
         elif isinstance(item, Load):
             lines.append(indent + emit_load(item))
+        elif isinstance(item, Store):
+            from emission.memory import emit_store  # avoid cycle
+
+            lines.append(indent + emit_store(item))
         elif isinstance(item, CudaBranch):
             lines.append(indent + emit_branch_string(item))
         elif isinstance(item, CudaLabel):

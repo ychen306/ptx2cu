@@ -20,6 +20,7 @@ from .types import (
     ConstantInt,
     CudaPointerType,
     Load,
+    Store,
 )
 from .datatype import type_info_for_datatype
 from .utils import collect_registers, render_operand_with_index
@@ -250,6 +251,70 @@ def emit_ld_global(
     return Load(
         ty=target_ty, dst=dest_var, src=base_expr, offset=offset, is_param=False
     )
+
+
+def emit_st_global(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Store]:
+    """
+    Lower st.global.* into a Store IR node. Returns None if unsupported.
+    """
+    if instr.predicate is not None:
+        return None
+    if not instr.opcode.startswith("st.global"):
+        return None
+    if len(instr.operands) < 2:
+        return None
+
+    dest_ptr_op = instr.operands[0]
+    value_op = instr.operands[1]
+    if not isinstance(dest_ptr_op, ptx.MemoryRef) or not isinstance(
+        dest_ptr_op.base, ptx.Register
+    ):
+        return None
+
+    base_ptr = regmap.get(dest_ptr_op.base)
+    if base_ptr is None:
+        return None
+
+    # Determine element type from opcode suffix
+    op_suffix = instr.opcode.split(".")[-1]
+    elem_type = op_suffix if op_suffix != "global" else "u32"
+    _, bitwidth, is_float = type_info_for_datatype(elem_type)
+    target_ty = CudaType(
+        bitwidth=bitwidth,
+        type_id=CudaTypeId.Float if is_float else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+    elem_size = target_ty.bitwidth // 8
+
+    offset = dest_ptr_op.offset or 0
+    if offset % elem_size != 0:
+        return None
+
+    # Pointer expression, bitcast if necessary
+    base_expr: Expr = base_ptr
+    base_ty = base_ptr.get_type()
+    desired_ptr_ty = CudaPointerType(elem=target_ty)
+    if not isinstance(base_ty, CudaPointerType) or base_ty.elem != target_ty:
+        base_expr = BitCast(new_type=desired_ptr_ty, operand=base_ptr)
+
+    # Value expression
+    if isinstance(value_op, ptx.Register):
+        val_var = regmap.get(value_op)
+        if val_var is None:
+            return None
+        value_expr: Expr = (
+            val_var if val_var.get_type() == target_ty else BitCast(target_ty, val_var)
+        )
+    else:
+        try:
+            imm_val = int(value_op.value, 0)
+        except ValueError:
+            return None
+        value_expr = ConstantInt(value=imm_val, ty=target_ty)
+
+    return Store(pointer=base_expr, offset=offset, value=value_expr)
 
 
 def emit_inline_asm(

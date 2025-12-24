@@ -7,9 +7,11 @@ from cudagen.types import (
     CudaPointerType,
     BitCast,
     Load,
+    Store,
 )
 from emission.expr import emit_assignment_stmt
 from emission.param import emit_load
+from emission.memory import emit_store
 
 
 t_i32 = CudaType(32, CudaTypeId.Unsigned)
@@ -84,3 +86,13 @@ def test_emit_load_from_ld_global_with_bitcast():
         is_param=False,
     )
     assert emit_load(load) == "r1 = reinterpret_cast<int*>(rd1)[0];"
+
+
+def test_emit_store_basic():
+    ptr_ty = CudaPointerType(elem=t_i32)
+    store = Store(
+        pointer=Var("rd1", ptr_ty),
+        offset=4,
+        value=Var("r2", t_i32),
+    )
+    assert emit_store(store) == "rd1[1] = r2;"

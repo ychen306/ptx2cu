@@ -13,7 +13,7 @@ from cudagen.types import (
     ConstantInt,
     Load,
 )
-from cudagen.render_inst import emit_ld_global, emit_assignment
+from cudagen.render_inst import emit_ld_global, emit_st_global, emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, CudaTypeId.Unsigned)
@@ -268,3 +268,49 @@ def test_emit_ld_global_with_pointer_bitcast():
     assert isinstance(load, Load)
     assert isinstance(load.src, BitCast)
     assert load.offset == 0
+
+
+def test_emit_st_global_basic():
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="st.global.u32",
+        operands=[
+            ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=1), offset=0),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    regmap = {
+        ptx.Register(prefix="rd", idx=1): Var(
+            "ptr", CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned))
+        ),
+        ptx.Register(prefix="r", idx=2): Var(
+            "val", CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)
+        ),
+    }
+    store = emit_st_global(instr, regmap)
+    assert store is not None
+    assert store.offset == 0
+
+
+def test_emit_st_global_bitcasts():
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="st.global.f32",
+        operands=[
+            ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=1), offset=4),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    regmap = {
+        ptx.Register(prefix="rd", idx=1): Var(
+            "ptr", CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned))
+        ),
+        ptx.Register(prefix="r", idx=2): Var(
+            "val", CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)
+        ),
+    }
+    store = emit_st_global(instr, regmap)
+    assert store is not None
+    assert isinstance(store.pointer, BitCast)
+    assert store.offset == 4
+    assert isinstance(store.value, BitCast)

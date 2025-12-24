@@ -175,9 +175,9 @@ class Load(KernelItem):
 
 @dataclass
 class Store(KernelItem):
-    """*pointer = value"""
-
+    """pointer[offset] = value"""
     pointer: Expr
+    offset: int
     value: Expr
 
 

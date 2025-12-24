@@ -23,7 +23,7 @@ extern "C" __global__ void _Z5saxpyifPKfPf(unsigned int _Z5saxpyifPKfPf_param_0,
   f2 = reinterpret_cast<float*>(rd7)[0];
   f3 = reinterpret_cast<float*>(rd6)[0];
   asm volatile("fma.rn.f32 %0, %1, %2, %3;" : "+f"(f4) : "f"(f3), "f"(f1), "f"(f2) : );
-  asm volatile("st.global.f32 [%0], %1;" :  : "l"(rd7), "f"(f4) : "memory");
+  reinterpret_cast<float*>(rd7)[0] = f4;
 L__BB0_2:
   return;
 }
