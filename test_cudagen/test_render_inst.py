@@ -2,7 +2,14 @@ import pytest
 
 import ptx
 from cudagen import InlineAsm, Var, emit_inline_asm
-from cudagen.types import CudaType, Assignment, BinaryOperator, BinaryOpcode, BitCast
+from cudagen.types import (
+    CudaType,
+    Assignment,
+    BinaryOperator,
+    BinaryOpcode,
+    BitCast,
+    ConstantInt,
+)
 from cudagen.render_inst import emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
@@ -193,3 +200,26 @@ def test_emit_assignment_bitcasts_int_inputs_for_float_opcode():
     assert inner.opcode == BinaryOpcode.FAdd
     assert isinstance(inner.operand_a, BitCast)
     assert isinstance(inner.operand_b, BitCast)
+
+
+def test_emit_assignment_with_immediate_shift():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="shr.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Immediate("6"),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    rhs = assignment.rhs
+    assert isinstance(rhs, BinaryOperator)
+    assert rhs.opcode in (BinaryOpcode.AShr, BinaryOpcode.LShr)
+    assert isinstance(rhs.operand_b, ConstantInt)
+    assert rhs.operand_b.value == 6

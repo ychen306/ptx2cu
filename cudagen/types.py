@@ -61,6 +61,14 @@ class BinaryOperator(Expr):
         return self.operand_a.get_type()
 
 @dataclass
+class ConstantInt(Expr):
+    value: int
+    ty: CudaType
+
+    def get_type(self) -> Optional[CudaType]:
+        return self.ty
+
+@dataclass
 class BitCast(Expr):
     new_type: CudaType
     operand: Expr

@@ -7,7 +7,7 @@ import ptx
 
 from .types import CudaKernel, CudaLabel, Var, CudaModule, Return, CudaType
 from .render_branch import emit_branch
-from .render_inst import emit_inline_asm
+from .render_inst import emit_inline_asm, emit_assignment
 from .render_param import emit_ld_param
 from .datatype import type_info_for_datatype
 
@@ -57,6 +57,7 @@ class CudaGen:
         name = f"{prefix}{idx}"
 
         # Determine bitwidth and type flags
+        is_signed = False
         dt = decl.datatype
         if dt == "pred":
             bitwidth = 32
@@ -84,8 +85,19 @@ class CudaGen:
                 bitwidth = 32
             is_float = False
             represents_predicate = False
+            if dt.startswith("s"):
+                is_signed = True
+            elif dt.startswith("u"):
+                is_signed = False
+            else:
+                is_signed = False
 
-        ty = CudaType(bitwidth=bitwidth, is_float=is_float, represents_predicate=represents_predicate)
+        ty = CudaType(
+            bitwidth=bitwidth,
+            is_float=is_float,
+            represents_predicate=represents_predicate,
+            is_signed=is_signed,
+        )
         var = Var(name=name, ty=ty)
         self.var_decls.append(var)
         return var
@@ -107,7 +119,11 @@ class CudaGen:
                 if node.opcode.startswith("ld.param"):
                     items.append(emit_ld_param(node, self.reg_map, self.param_map))
                 else:
-                    items.append(emit_inline_asm(node, self.reg_map))
+                    assignment = emit_assignment(node, self.reg_map)
+                    if assignment is not None:
+                        items.append(assignment)
+                    else:
+                        items.append(emit_inline_asm(node, self.reg_map))
             elif isinstance(node, ptx.ScopedBlock):
                 self._walk_block(node, items)
             # ignore other directive/opaque nodes for now

@@ -4,7 +4,16 @@ from emission.inst import emit_inline_asm_ir
 from emission.param import emit_load
 from emission.branch import emit_branch_string
 from emission.local import declare_local, ctype_for_var
-from cudagen.types import CudaKernel, InlineAsm, Load, CudaBranch, CudaLabel, Return
+from emission.expr import emit_assignment_stmt
+from cudagen.types import (
+    CudaKernel,
+    InlineAsm,
+    Load,
+    CudaBranch,
+    CudaLabel,
+    Return,
+    Assignment,
+)
 
 
 def emit_kernel(kernel: CudaKernel) -> str:
@@ -49,6 +58,8 @@ def emit_kernel(kernel: CudaKernel) -> str:
             lines.append(f"{item.name}:")
         elif isinstance(item, Return):
             lines.append(indent + "return;")
+        elif isinstance(item, Assignment):
+            lines.append(indent + emit_assignment_stmt(item))
         else:
             raise ValueError(f"Unsupported kernel item: {type(item).__name__}")
 

@@ -16,6 +16,7 @@ from .types import (
     Assignment,
     BitCast,
     CudaType,
+    ConstantInt,
 )
 from .utils import collect_registers, render_operand_with_index
 
@@ -70,13 +71,15 @@ def emit_assignment(
     dest_op, src0_op, src1_op = instr.operands[0:3]
     if not isinstance(dest_op, ptx.Register):
         return None
-    if not isinstance(src0_op, ptx.Register) or not isinstance(src1_op, ptx.Register):
+    if not isinstance(src0_op, ptx.Register):
+        return None
+    if not isinstance(src1_op, (ptx.Register, ptx.Immediate)):
         return None
 
     dest = regmap.get(dest_op)
     src0 = regmap.get(src0_op)
-    src1 = regmap.get(src1_op)
-    if dest is None or src0 is None or src1 is None:
+    src1 = regmap.get(src1_op) if isinstance(src1_op, ptx.Register) else None
+    if dest is None or src0 is None or (isinstance(src1_op, ptx.Register) and src1 is None):
         return None
 
     rhs = emit_binary_expr(instr, regmap)
@@ -107,25 +110,33 @@ def emit_binary_expr(
         return None
 
     src0_op, src1_op = instr.operands[1], instr.operands[2]
-    if not isinstance(src0_op, ptx.Register) or not isinstance(src1_op, ptx.Register):
+    if not isinstance(src0_op, ptx.Register):
+        return None
+    # src1 can be register or immediate int for some ops (e.g., shr)
+    if not isinstance(src1_op, (ptx.Register, ptx.Immediate)):
         return None
 
     src0 = regmap.get(src0_op)
-    src1 = regmap.get(src1_op)
-    if src0 is None or src1 is None:
+    if src0 is None:
         return None
 
     ty0 = src0.get_type()
-    ty1 = src1.get_type()
-    if ty0 is None or ty1 is None:
+    if ty0 is None:
         return None
 
     opcode_bw = _opcode_bitwidth(instr.opcode) or ty0.bitwidth
     # Decide float/int based purely on opcode suffix, not operand types.
     is_float_opcode = any(part.startswith("f") for part in instr.opcode.split("."))
+    # Preserve operand signedness when not float; opcode signedness is secondary.
+    is_signed_opcode = any(part.startswith("s") for part in instr.opcode.split("."))
     target_ty = CudaType(
-        bitwidth=opcode_bw, is_float=is_float_opcode, represents_predicate=False
+        bitwidth=opcode_bw,
+        is_float=is_float_opcode,
+        represents_predicate=False,
+        is_signed=ty0.is_signed if not is_float_opcode else False,
     )
+    if target_ty.bitwidth == 16:
+        return None
 
     mnemonic = _get_mnemonic(instr.opcode)
     if mnemonic == "mul.wide":
@@ -153,7 +164,20 @@ def emit_binary_expr(
         return None
 
     op_a: Expr = src0 if src0.get_type() == target_ty else BitCast(target_ty, src0)
-    op_b: Expr = src1 if src1.get_type() == target_ty else BitCast(target_ty, src1)
+    if isinstance(src1_op, ptx.Register):
+        src1_var = regmap.get(src1_op)
+        if src1_var is None:
+            return None
+        op_b: Expr = (
+            src1_var if src1_var.get_type() == target_ty else BitCast(target_ty, src1_var)
+        )
+    else:
+        # immediate
+        try:
+            imm_val = int(src1_op.value, 0)
+        except ValueError:
+            return None
+        op_b = ConstantInt(value=imm_val, ty=target_ty)
 
     return BinaryOperator(opcode=op, operand_a=op_a, operand_b=op_b)
 

@@ -9,6 +9,7 @@ from cudagen.types import (
     BinaryOperator,
     CudaType,
     Expr,
+    ConstantInt,
     Var,
 )
 
@@ -51,6 +52,20 @@ def _bitcast_intrinsic(src: CudaType, dst: CudaType) -> str:
     raise ValueError(f"Unsupported bitcast from {src} to {dst}")
 
 
+def _ctype_for_type(ty: CudaType) -> str:
+    if ty.is_float:
+        if ty.bitwidth == 64:
+            return "double"
+        if ty.bitwidth == 32:
+            return "float"
+        raise ValueError(f"Unsupported float bitwidth: {ty.bitwidth}")
+    if ty.bitwidth == 64:
+        return "long long" if ty.is_signed else "unsigned long long"
+    if ty.bitwidth == 32:
+        return "int" if ty.is_signed else "unsigned int"
+    raise ValueError(f"Unsupported integer bitwidth: {ty.bitwidth}")
+
+
 def emit_expr(expr: Expr) -> str:
     if isinstance(expr, Var):
         return expr.name
@@ -59,8 +74,17 @@ def emit_expr(expr: Expr) -> str:
         dst_ty = expr.new_type
         if src_ty is None or dst_ty is None:
             raise ValueError("BitCast requires source and destination types")
+        # If both integer and same width, use a C cast to switch signedness.
+        if (
+            not src_ty.is_float
+            and not dst_ty.is_float
+            and src_ty.bitwidth == dst_ty.bitwidth
+        ):
+            return f"({ _ctype_for_type(dst_ty) })({emit_expr(expr.operand)})"
         intrinsic = _bitcast_intrinsic(src_ty, dst_ty)
         return f"{intrinsic}({emit_expr(expr.operand)})"
+    if isinstance(expr, ConstantInt):
+        return str(expr.value)
     if isinstance(expr, BinaryOperator):
         op_symbol = _binary_op_symbol(expr.opcode)
         lhs = emit_expr(expr.operand_a)
