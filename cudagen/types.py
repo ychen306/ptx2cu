@@ -59,6 +59,14 @@ class BinaryOperator(Expr):
         assert self.operand_a.get_type() == self.operand_b.get_type()
         return self.operand_a.get_type()
 
+@dataclass
+class BitCast(Expr):
+    new_type: CudaType
+    operand: Expr
+
+    def get_type(self) -> Optional[CudaType]:
+        return self.new_type
+
 
 class KernelItem(ABC):
     pass

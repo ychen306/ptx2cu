@@ -2,7 +2,7 @@ import pytest
 
 import ptx
 from cudagen import InlineAsm, Var, emit_inline_asm
-from cudagen.types import CudaType, Assignment, BinaryOperator, BinaryOpcode
+from cudagen.types import CudaType, Assignment, BinaryOperator, BinaryOpcode, BitCast
 from cudagen.render_inst import emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
@@ -165,3 +165,31 @@ def test_emit_assignment_reject_mul_wide():
         ],
     )
     assert emit_assignment(instr, regmap) is None
+
+
+def test_emit_assignment_bitcasts_int_inputs_for_float_opcode():
+    # Integer-typed registers used with a float opcode should be bitcast to float
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="add.f32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    # RHS should be bitcast to the dest type, with inner BinaryOperator and BitCast operands to float
+    rhs = assignment.rhs
+    assert isinstance(rhs, BitCast)
+    inner = rhs.operand
+    assert isinstance(inner, BinaryOperator)
+    assert inner.opcode == BinaryOpcode.FAdd
+    assert isinstance(inner.operand_a, BitCast)
+    assert isinstance(inner.operand_b, BitCast)

@@ -6,7 +6,17 @@ from typing import Mapping, Optional
 
 import re
 
-from .types import InlineAsm, Var, Expr, AddressOf, BinaryOpcode, BinaryOperator, Assignment
+from .types import (
+    InlineAsm,
+    Var,
+    Expr,
+    AddressOf,
+    BinaryOpcode,
+    BinaryOperator,
+    Assignment,
+    BitCast,
+    CudaType,
+)
 from .utils import collect_registers, render_operand_with_index
 
 
@@ -69,21 +79,65 @@ def emit_assignment(
     if dest is None or src0 is None or src1 is None:
         return None
 
-    ty = dest.get_type()
-    if ty is None or ty != src0.get_type() or ty != src1.get_type():
+    rhs = emit_binary_expr(instr, regmap)
+    if rhs is None:
         return None
+
+    # Ensure output type matches RHS type
+    dest_ty = dest.get_type()
+    rhs_ty = rhs.get_type()
+    if dest_ty is None or rhs_ty is None:
+        return None
+    if dest_ty != rhs_ty:
+        rhs = BitCast(new_type=dest_ty, operand=rhs)
+
+    return Assignment(lhs=dest, rhs=rhs)
+
+
+def emit_binary_expr(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Expr]:
+    """
+    Lower a PTX instruction with two register sources into a BinaryOperator.
+    Returns None if opcode/shape is unsupported.
+    """
+    if instr.predicate is not None:
+        return None
+    if len(instr.operands) < 3:
+        return None
+
+    src0_op, src1_op = instr.operands[1], instr.operands[2]
+    if not isinstance(src0_op, ptx.Register) or not isinstance(src1_op, ptx.Register):
+        return None
+
+    src0 = regmap.get(src0_op)
+    src1 = regmap.get(src1_op)
+    if src0 is None or src1 is None:
+        return None
+
+    ty0 = src0.get_type()
+    ty1 = src1.get_type()
+    if ty0 is None or ty1 is None:
+        return None
+
+    opcode_bw = _opcode_bitwidth(instr.opcode) or ty0.bitwidth
+    # Decide float/int based purely on opcode suffix, not operand types.
+    is_float_opcode = any(part.startswith("f") for part in instr.opcode.split("."))
+    target_ty = CudaType(
+        bitwidth=opcode_bw, is_float=is_float_opcode, represents_predicate=False
+    )
 
     mnemonic = _get_mnemonic(instr.opcode)
     if mnemonic == "mul.wide":
         return None
 
     opcode_map: dict[str, BinaryOpcode] = {
-        "add": BinaryOpcode.FAdd if ty.is_float else BinaryOpcode.Add,
+        "add": BinaryOpcode.FAdd if is_float_opcode else BinaryOpcode.Add,
         "and": BinaryOpcode.And,
         "or": BinaryOpcode.Or,
         "xor": BinaryOpcode.Xor,
         "shl": BinaryOpcode.Shl,
-        "mul": BinaryOpcode.FMul if ty.is_float else BinaryOpcode.Mul,
+        "mul": BinaryOpcode.FMul if is_float_opcode else BinaryOpcode.Mul,
         "mul.lo": BinaryOpcode.Mul,
         "shr": BinaryOpcode.AShr if "s" in instr.opcode.split(".") else BinaryOpcode.LShr,
     }
@@ -92,16 +146,16 @@ def emit_assignment(
     if op is None:
         return None
 
-    # Basic float/int consistency guard
-    if ty.is_float and op not in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
+    # Basic float/int consistency guard based on opcode class
+    if is_float_opcode and op not in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
         return None
-    if not ty.is_float and op in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
+    if not is_float_opcode and op in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
         return None
 
-    return Assignment(
-        lhs=dest,
-        rhs=BinaryOperator(opcode=op, operand_a=src0, operand_b=src1),
-    )
+    op_a: Expr = src0 if src0.get_type() == target_ty else BitCast(target_ty, src0)
+    op_b: Expr = src1 if src1.get_type() == target_ty else BitCast(target_ty, src1)
+
+    return BinaryOperator(opcode=op, operand_a=op_a, operand_b=op_b)
 
 
 def emit_inline_asm(
