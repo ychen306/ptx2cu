@@ -15,7 +15,7 @@ from .types import (
     CudaTypeId,
 )
 from .render_branch import emit_branch
-from .render_inst import emit_inline_asm, emit_assignment
+from .render_inst import emit_inline_asm, emit_assignment, emit_ld_global
 from .render_param import emit_ld_param
 from .datatype import type_info_for_datatype
 
@@ -122,8 +122,12 @@ class CudaGen:
                     assignment = emit_assignment(node, self.reg_map)
                     if assignment is not None:
                         items.append(assignment)
-                    else:
-                        items.append(emit_inline_asm(node, self.reg_map))
+                        continue
+                    ld_global = emit_ld_global(node, self.reg_map)
+                    if ld_global is not None:
+                        items.append(ld_global)
+                        continue
+                    items.append(emit_inline_asm(node, self.reg_map))
             elif isinstance(node, ptx.ScopedBlock):
                 self._walk_block(node, items)
             # ignore other directive/opaque nodes for now

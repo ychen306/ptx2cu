@@ -5,13 +5,15 @@ from cudagen import InlineAsm, Var, emit_inline_asm
 from cudagen.types import (
     CudaType,
     CudaTypeId,
+    CudaPointerType,
     Assignment,
     BinaryOperator,
     BinaryOpcode,
     BitCast,
     ConstantInt,
+    Load,
 )
-from cudagen.render_inst import emit_assignment
+from cudagen.render_inst import emit_ld_global, emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, CudaTypeId.Unsigned)
@@ -224,3 +226,45 @@ def test_emit_assignment_with_immediate_shift():
     assert rhs.opcode in (BinaryOpcode.AShr, BinaryOpcode.LShr)
     assert isinstance(rhs.operand_b, ConstantInt)
     assert rhs.operand_b.value == 6
+
+
+def test_emit_ld_global_basic():
+    ptr_ty = CudaPointerType(elem=t32)
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="rd", idx=1): Var("rd1", ptr_ty),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="ld.global.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=1), offset=4),
+        ],
+    )
+    load = emit_ld_global(instr, regmap)
+    assert isinstance(load, Load)
+    assert load.ty == t32
+    assert load.src == Var("rd1", ptr_ty)
+    assert load.offset == 4
+    assert load.is_param is False
+
+
+def test_emit_ld_global_with_pointer_bitcast():
+    ptr_ty = CudaPointerType(elem=CudaType(32, CudaTypeId.Signed))
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="rd", idx=1): Var("rd1", ptr_ty),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="ld.global.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.MemoryRef(base=ptx.Register(prefix="rd", idx=1), offset=0),
+        ],
+    )
+    load = emit_ld_global(instr, regmap)
+    assert isinstance(load, Load)
+    assert isinstance(load.src, BitCast)
+    assert load.offset == 0

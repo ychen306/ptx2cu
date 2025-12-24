@@ -8,6 +8,8 @@ from cudagen.types import (
     BinaryOpcode,
     BinaryOperator,
     CudaType,
+    CudaTypeId,
+    CudaPointerType,
     Expr,
     ConstantInt,
     Var,
@@ -52,13 +54,15 @@ def _bitcast_intrinsic(src: CudaType, dst: CudaType) -> str:
     raise ValueError(f"Unsupported bitcast from {src} to {dst}")
 
 
-def _ctype_for_type(ty: CudaType) -> str:
+def _ctype_for_type(ty: CudaType | CudaPointerType) -> str:
     if ty.is_float:
         if ty.bitwidth == 64:
             return "double"
         if ty.bitwidth == 32:
             return "float"
         raise ValueError(f"Unsupported float bitwidth: {ty.bitwidth}")
+    if isinstance(ty, CudaPointerType):
+        return _ctype_for_type(ty.elem) + "*"
     if ty.bitwidth == 64:
         return "long long" if ty.is_signed else "unsigned long long"
     if ty.bitwidth == 32:
@@ -74,6 +78,8 @@ def emit_expr(expr: Expr) -> str:
         dst_ty = expr.new_type
         if src_ty is None or dst_ty is None:
             raise ValueError("BitCast requires source and destination types")
+        if isinstance(dst_ty, CudaPointerType):
+            return f"reinterpret_cast<{_ctype_for_type(dst_ty)}>({emit_expr(expr.operand)})"
         # If both integer and same width, use a C cast to switch signedness.
         if (
             not src_ty.is_float
@@ -81,7 +87,11 @@ def emit_expr(expr: Expr) -> str:
             and src_ty.bitwidth == dst_ty.bitwidth
         ):
             return f"({ _ctype_for_type(dst_ty) })({emit_expr(expr.operand)})"
-        intrinsic = _bitcast_intrinsic(src_ty, dst_ty)
+        intrinsic = _bitcast_intrinsic(src_ty, dst_ty) if isinstance(src_ty, CudaType) and isinstance(dst_ty, CudaType) else None
+        if intrinsic is None and isinstance(dst_ty, CudaPointerType):
+            return f"reinterpret_cast<{_ctype_for_type(dst_ty)}>({emit_expr(expr.operand)})"
+        if intrinsic is None:
+            raise ValueError(f"Unsupported bitcast from {src_ty} to {dst_ty}")
         return f"{intrinsic}({emit_expr(expr.operand)})"
     if isinstance(expr, ConstantInt):
         return str(expr.value)

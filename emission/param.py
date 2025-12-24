@@ -4,6 +4,7 @@ import ptx
 
 from cudagen.datatype import ctype_for_datatype, sizeof_datatype
 from cudagen.types import Load, MemoryDecl
+from emission.expr import emit_expr
 
 
 def get_type_decl_for_param(param: MemoryDecl) -> tuple[str | None, str]:
@@ -51,6 +52,9 @@ def emit_load(load: Load) -> str:
         else:
             ctype = "unsigned int"
 
-    base_ptr = f"reinterpret_cast<{ctype}*>({('&' + load.src.name) if load.is_param else load.src.name})"
+    if load.is_param:
+        base_ptr = f"reinterpret_cast<{ctype}*>(&{emit_expr(load.src)})"
+    else:
+        base_ptr = emit_expr(load.src)
     rhs = f"{base_ptr}[{idx}]"
     return f"{load.dst.name} = {rhs};"

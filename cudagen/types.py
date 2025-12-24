@@ -9,7 +9,7 @@ import ptx
 
 # cuda expression
 class Expr(ABC):
-    def get_type(self) -> Optional["CudaType"]:
+    def get_type(self) -> Optional["CudaType | CudaPointerType"]:
         return None
 
 
@@ -120,10 +120,10 @@ class ConstantInt(Expr):
 
 @dataclass
 class BitCast(Expr):
-    new_type: CudaType
+    new_type: CudaType | CudaPointerType
     operand: Expr
 
-    def get_type(self) -> Optional[CudaType]:
+    def get_type(self) -> Optional[CudaType | CudaPointerType]:
         return self.new_type
 
 
@@ -163,7 +163,7 @@ class Load(KernelItem):
 
     ty: CudaType
     dst: Var
-    src: Var
+    src: Expr
     offset: int
     is_param: bool = False
 

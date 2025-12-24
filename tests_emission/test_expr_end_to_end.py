@@ -1,7 +1,15 @@
 import ptx
 from cudagen.render_inst import emit_assignment
-from cudagen.types import CudaType, Var, CudaTypeId
+from cudagen.types import (
+    CudaType,
+    Var,
+    CudaTypeId,
+    CudaPointerType,
+    BitCast,
+    Load,
+)
 from emission.expr import emit_assignment_stmt
+from emission.param import emit_load
 
 
 t_i32 = CudaType(32, CudaTypeId.Unsigned)
@@ -50,3 +58,29 @@ def test_emit_assignment_from_add_f32_with_int_inputs_bitcasts():
         emit_assignment_stmt(assignment)
         == "r1 = __float_as_uint((__uint_as_float(r2) + __uint_as_float(r3)));"
     )
+
+
+def test_emit_load_from_ld_global_direct():
+    # Simulate a Load coming from ld.global with matching pointer type
+    ptr_ty = CudaPointerType(elem=t_i32)
+    load = Load(
+        ty=t_i32,
+        dst=Var("r1", t_i32),
+        src=Var("rd1", ptr_ty),
+        offset=4,
+        is_param=False,
+    )
+    assert emit_load(load) == "r1 = rd1[1];"
+
+
+def test_emit_load_from_ld_global_with_bitcast():
+    # Pointer elem type mismatched; src is a BitCast
+    ptr_ty = CudaPointerType(elem=CudaType(32, CudaTypeId.Signed))
+    load = Load(
+        ty=t_i32,
+        dst=Var("r1", t_i32),
+        src=BitCast(new_type=ptr_ty, operand=Var("rd1", CudaPointerType(elem=t_i32))),
+        offset=0,
+        is_param=False,
+    )
+    assert emit_load(load) == "r1 = reinterpret_cast<int*>(rd1)[0];"

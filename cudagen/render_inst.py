@@ -18,7 +18,10 @@ from .types import (
     CudaType,
     CudaTypeId,
     ConstantInt,
+    CudaPointerType,
+    Load,
 )
+from .datatype import type_info_for_datatype
 from .utils import collect_registers, render_operand_with_index
 
 
@@ -184,6 +187,57 @@ def emit_binary_expr(
         op_b = ConstantInt(value=imm_val, ty=target_ty)
 
     return BinaryOperator(opcode=op, operand_a=op_a, operand_b=op_b)
+
+
+def emit_ld_global(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> Optional[Load]:
+    """
+    Lower ld.global.* into a Load IR node. Returns None if unsupported.
+    """
+    if instr.predicate is not None:
+        return None
+    if not instr.opcode.startswith("ld.global"):
+        return None
+    if len(instr.operands) < 2:
+        return None
+
+    dest_op = instr.operands[0]
+    src_op = instr.operands[1]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    if not isinstance(src_op, ptx.MemoryRef) or not isinstance(src_op.base, ptx.Register):
+        return None
+
+    dest_var = regmap.get(dest_op)
+    base_ptr = regmap.get(src_op.base)
+    if dest_var is None or base_ptr is None:
+        return None
+
+    # Determine element type from opcode suffix
+    op_suffix = instr.opcode.split(".")[-1]
+    elem_type = op_suffix if op_suffix != "global" else "u32"
+    _, bitwidth, is_float = type_info_for_datatype(elem_type)
+    if bitwidth == 16:
+        return None
+    target_ty = CudaType(
+        bitwidth=bitwidth,
+        type_id=CudaTypeId.Float if is_float else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+
+    elem_size = target_ty.bitwidth // 8
+    offset = src_op.offset or 0
+    if offset % elem_size != 0:
+        return None
+    index = offset // elem_size
+
+    # Ensure pointer type matches element; bitcast pointer if needed
+    base_expr: Expr = base_ptr
+    base_ty = base_ptr.get_type()
+    desired_ptr_ty = CudaPointerType(elem=target_ty)
+    if not isinstance(base_ty, CudaPointerType) or base_ty.elem != target_ty:
+        base_expr = BitCast(new_type=desired_ptr_ty, operand=base_ptr)
+
+    return Load(ty=target_ty, dst=dest_var, src=base_expr, offset=offset, is_param=False)
 
 
 def emit_inline_asm(
