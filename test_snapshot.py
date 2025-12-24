@@ -14,7 +14,6 @@ FIXTURES = [
 
 
 @pytest.mark.parametrize("name,fixture_path", FIXTURES)
-@pytest.mark.xfail(reason="Snapshots not yet updated for assignment-based emission")
 def test_end_to_end_snapshot(name: str, fixture_path: Path) -> None:
     result = subprocess.run(
         [sys.executable, "ptx2cu.py", str(fixture_path)],

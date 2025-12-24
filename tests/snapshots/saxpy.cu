@@ -18,10 +18,10 @@ extern "C" __global__ void _Z5saxpyifPKfPf(unsigned int _Z5saxpyifPKfPf_param_0,
   asm volatile("cvta.to.global.u64 %0, %1;" : "+l"(rd3) : "l"(rd2) : );
   asm volatile("cvta.to.global.u64 %0, %1;" : "+l"(rd4) : "l"(rd1) : );
   asm volatile("mul.wide.s32 %0, %1, 4;" : "+l"(rd5) : "r"(r1) : );
-  asm volatile("add.s64 %0, %1, %2;" : "+l"(rd6) : "l"(rd4), "l"(rd5) : );
-  asm volatile("add.s64 %0, %1, %2;" : "+l"(rd7) : "l"(rd3), "l"(rd5) : );
-  asm volatile("ld.global.f32 %0, [%1];" : "+f"(f2) : "l"(rd7) : "memory");
-  asm volatile("ld.global.f32 %0, [%1];" : "+f"(f3) : "l"(rd6) : "memory");
+  rd6 = (rd4 + rd5);
+  rd7 = (rd3 + rd5);
+  f2 = reinterpret_cast<float*>(rd7)[0];
+  f3 = reinterpret_cast<float*>(rd6)[0];
   asm volatile("fma.rn.f32 %0, %1, %2, %3;" : "+f"(f4) : "f"(f3), "f"(f1), "f"(f2) : );
   asm volatile("st.global.f32 [%0], %1;" :  : "l"(rd7), "f"(f4) : "memory");
 L__BB0_2:
