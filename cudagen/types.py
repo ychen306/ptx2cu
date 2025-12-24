@@ -3,13 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 from abc import ABC
-from enum import IntEnum
+from enum import Enum, auto
 import ptx
 
 
 # cuda expression
 class Expr(ABC):
-    pass
+    def get_type(self) -> Optional["CudaType"]:
+        return None
 
 
 @dataclass(frozen=True)
@@ -24,13 +25,34 @@ class Var(Expr):
     name: str
     ty: CudaType
 
-class BinaryOpcode(IntEnum):
-    pass
+    def get_type(self) -> Optional[CudaType]:
+        return self.ty
 
+class BinaryOpcode(Enum):
+    # integer 
+    Add = auto()
+    Sub = auto()
+    SDiv = auto()
+    UDiv = auto()
+
+    # float
+    FAdd = auto()
+    FMul = auto()
+    FDiv = auto()
+
+    # bitwise
+    Or = auto()
+    And = auto()
+    Shl = auto()
+    LShr = auto()
+    AShr = auto()
+    Xor = auto()
 
 @dataclass
 class BinaryOperator(Expr):
     opcode : BinaryOpcode
+    operand_a  : Expr
+    operand_b : Expr
 
 
 class KernelItem(ABC):
@@ -41,6 +63,10 @@ class KernelItem(ABC):
 class AddressOf(Expr):
     symbol: ptx.MemorySymbol
     bitwidth: Optional[int]
+
+    def get_type(self) -> Optional[CudaType]:
+        # AddressOf itself has no numeric value type; caller should treat as None.
+        return None
 
 
 @dataclass
