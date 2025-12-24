@@ -6,16 +6,17 @@ from cudagen.types import (
     BinaryOperator,
     BitCast,
     CudaType,
+    CudaTypeId,
     Var,
 )
 from emission.expr import emit_expr, emit_assignment_stmt
 
 
-t_i32 = CudaType(32, False, is_signed=False)
-t_i32s = CudaType(32, False, is_signed=True)
-t_f32 = CudaType(32, True)
-t_i64 = CudaType(64, False, is_signed=True)
-t_f64 = CudaType(64, True)
+t_i32 = CudaType(32, CudaTypeId.Unsigned)
+t_i32s = CudaType(32, CudaTypeId.Signed)
+t_f32 = CudaType(32, CudaTypeId.Float)
+t_i64 = CudaType(64, CudaTypeId.Signed)
+t_f64 = CudaType(64, CudaTypeId.Float)
 
 
 def test_emit_expr_binary_add():
@@ -56,4 +57,4 @@ def test_emit_expr_bitcast_double_to_longlong():
 
 def test_emit_expr_bitcast_unsupported():
     with pytest.raises(ValueError):
-        emit_expr(BitCast(new_type=t_i32, operand=Var("h1", CudaType(16, False))))
+        emit_expr(BitCast(new_type=t_i32, operand=Var("h1", CudaType(16, CudaTypeId.Unsigned))))

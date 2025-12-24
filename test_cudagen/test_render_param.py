@@ -1,9 +1,9 @@
 import ptx
 from cudagen import Load, emit_ld_param
-from cudagen.types import MemoryDecl, Var, CudaType
+from cudagen.types import MemoryDecl, Var, CudaType, CudaTypeId
 
-t32 = CudaType(32, False)
-tf16 = CudaType(16, True)
+t32 = CudaType(32, CudaTypeId.Unsigned)
+tf16 = CudaType(16, CudaTypeId.Float)
 
 
 def test_emit_ld_param_scalar():

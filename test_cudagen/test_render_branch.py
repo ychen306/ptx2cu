@@ -1,9 +1,9 @@
 import ptx
 import pytest
 from cudagen import CudaBranch, CudaLabel, Var, emit_branch
-from cudagen.types import CudaType
+from cudagen.types import CudaType, CudaTypeId
 
-tpred = CudaType(32, False, True)
+tpred = CudaType(32, CudaTypeId.Unsigned, True)
 
 
 def test_emit_branch_unconditional():

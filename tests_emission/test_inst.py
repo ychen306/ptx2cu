@@ -1,12 +1,12 @@
 import ptx
-from cudagen.types import Var, CudaType
+from cudagen.types import Var, CudaType, CudaTypeId
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 from emission.inst import emit_inline_asm_ir
 
-t32 = CudaType(32, False)
-t64 = CudaType(64, False)
-tf32 = CudaType(32, True)
-tpred = CudaType(32, False, True)
+t32 = CudaType(32, CudaTypeId.Unsigned)
+t64 = CudaType(64, CudaTypeId.Unsigned)
+tf32 = CudaType(32, CudaTypeId.Float)
+tpred = CudaType(32, CudaTypeId.Unsigned, True)
 
 
 def test_emit_inline_asm_string_basic():

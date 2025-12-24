@@ -7,13 +7,14 @@ from cudagen.types import (
     CudaBranch,
     CudaLabel,
     CudaType,
+    CudaTypeId,
 )
 from emission.kernel_body import emit_kernel
 from emission.param import get_type_decl_for_param
 from emission.branch import emit_branch_string
 
 
-t32 = CudaType(32, False)
+t32 = CudaType(32, CudaTypeId.Unsigned)
 
 
 def test_emit_kernel_simple():
@@ -28,13 +29,14 @@ def test_emit_kernel_simple():
         name="k",
         arguments=[(Var("p0", t32), arg_decl)],
         var_decls=[Var("r0", t32)],
-        body=[
-            Load(
-                ty=t32,
-                dst=Var("r0", t32),
-                src=Var("p0", t32),
-                offset=0,
-            ),
+            body=[
+                Load(
+                    ty=t32,
+                    dst=Var("r0", t32),
+                    src=Var("p0", t32),
+                    offset=0,
+                    is_param=True,
+                ),
             CudaLabel(name="L0"),
             InlineAsm(
                 template="add.s32 %0, %1, %2;",

@@ -16,6 +16,7 @@ from .types import (
     Assignment,
     BitCast,
     CudaType,
+    CudaTypeId,
     ConstantInt,
 )
 from .utils import collect_registers, render_operand_with_index
@@ -131,9 +132,12 @@ def emit_binary_expr(
     is_signed_opcode = any(part.startswith("s") for part in instr.opcode.split("."))
     target_ty = CudaType(
         bitwidth=opcode_bw,
-        is_float=is_float_opcode,
+        type_id=(
+            CudaTypeId.Float
+            if is_float_opcode
+            else (CudaTypeId.Signed if ty0.is_signed else CudaTypeId.Unsigned)
+        ),
         represents_predicate=False,
-        is_signed=ty0.is_signed if not is_float_opcode else False,
     )
     if target_ty.bitwidth == 16:
         return None

@@ -1,11 +1,11 @@
 import ptx
 from cudagen.render_inst import emit_assignment
-from cudagen.types import CudaType, Var
+from cudagen.types import CudaType, Var, CudaTypeId
 from emission.expr import emit_assignment_stmt
 
 
-t_i32 = CudaType(32, False, is_signed=False)
-t_f32 = CudaType(32, True)
+t_i32 = CudaType(32, CudaTypeId.Unsigned)
+t_f32 = CudaType(32, CudaTypeId.Float)
 
 
 def test_emit_assignment_from_add_s32():

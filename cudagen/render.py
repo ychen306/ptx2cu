@@ -5,7 +5,15 @@ from typing import List
 
 import ptx
 
-from .types import CudaKernel, CudaLabel, Var, CudaModule, Return, CudaType
+from .types import (
+    CudaKernel,
+    CudaLabel,
+    Var,
+    CudaModule,
+    Return,
+    CudaType,
+    CudaTypeId,
+)
 from .render_branch import emit_branch
 from .render_inst import emit_inline_asm, emit_assignment
 from .render_param import emit_ld_param
@@ -33,7 +41,7 @@ class CudaGen:
         Seed the root reg_map with PTX special registers mapped to CUDA built-ins.
         These are inputs-only and are not added to var_decls or name counters.
         """
-        scalar_i32 = CudaType(bitwidth=32, is_float=False)
+        scalar_i32 = CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)
         special = {
             ptx.Register(prefix="ctaid.x", idx=None): Var("blockIdx.x", scalar_i32),
             ptx.Register(prefix="ctaid.y", idx=None): Var("blockIdx.y", scalar_i32),
@@ -57,11 +65,10 @@ class CudaGen:
         name = f"{prefix}{idx}"
 
         # Determine bitwidth and type flags
-        is_signed = False
         dt = decl.datatype
         if dt == "pred":
             bitwidth = 32
-            is_float = False
+            type_id = CudaTypeId.Unsigned
             represents_predicate = True
         elif dt.startswith("f"):
             # float types
@@ -71,7 +78,7 @@ class CudaGen:
                 bitwidth = 64
             else:
                 bitwidth = 32
-            is_float = True
+            type_id = CudaTypeId.Float
             represents_predicate = False
         else:
             # integer/bit types
@@ -83,20 +90,13 @@ class CudaGen:
                 bitwidth = 64
             else:
                 bitwidth = 32
-            is_float = False
+            type_id = CudaTypeId.Signed if dt.startswith("s") else CudaTypeId.Unsigned
             represents_predicate = False
-            if dt.startswith("s"):
-                is_signed = True
-            elif dt.startswith("u"):
-                is_signed = False
-            else:
-                is_signed = False
 
         ty = CudaType(
             bitwidth=bitwidth,
-            is_float=is_float,
+            type_id=type_id,
             represents_predicate=represents_predicate,
-            is_signed=is_signed,
         )
         var = Var(name=name, ty=ty)
         self.var_decls.append(var)
@@ -142,7 +142,13 @@ class CudaGen:
         arguments: list[tuple[Var, ptx.MemoryDecl]] = []
         for p in entry.params:
             _, bitwidth, is_float = type_info_for_datatype(p.datatype)
-            arg_var = Var(name=p.name, ty=CudaType(bitwidth=bitwidth, is_float=is_float))
+            arg_var = Var(
+                name=p.name,
+                ty=CudaType(
+                    bitwidth=bitwidth,
+                    type_id=CudaTypeId.Float if is_float else CudaTypeId.Unsigned,
+                ),
+            )
             arguments.append((arg_var, p))
 
         body_items: list = []

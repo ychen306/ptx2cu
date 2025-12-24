@@ -2,10 +2,10 @@ import ptx
 import pytest
 
 from cudagen import CudaGen, Var
-from cudagen.types import CudaType
+from cudagen.types import CudaType, CudaTypeId
 
-t32 = CudaType(32, False)
-t_pred = CudaType(32, False, True)
+t32 = CudaType(32, CudaTypeId.Unsigned)
+t_pred = CudaType(32, CudaTypeId.Unsigned, True)
 
 
 def test_enter_and_exit_scope_basic():

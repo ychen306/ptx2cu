@@ -4,6 +4,7 @@ import ptx
 from cudagen import InlineAsm, Var, emit_inline_asm
 from cudagen.types import (
     CudaType,
+    CudaTypeId,
     Assignment,
     BinaryOperator,
     BinaryOpcode,
@@ -13,9 +14,9 @@ from cudagen.types import (
 from cudagen.render_inst import emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
-t32 = CudaType(32, False)
-t64 = CudaType(64, False)
-tpred = CudaType(32, False, True)
+t32 = CudaType(32, CudaTypeId.Unsigned)
+t64 = CudaType(64, CudaTypeId.Unsigned)
+tpred = CudaType(32, CudaTypeId.Unsigned, True)
 
 
 def test_emit_inline_asm_basic():

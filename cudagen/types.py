@@ -13,12 +13,62 @@ class Expr(ABC):
         return None
 
 
+class CudaTypeId(Enum):
+    Signed = "signed"
+    Unsigned = "unsigned"
+    Float = "float"
+    Pointer = "pointer"
+
+
 @dataclass(frozen=True)
 class CudaType:
     bitwidth: int
-    is_float: bool
+    type_id: CudaTypeId
     represents_predicate: bool = False
-    is_signed: bool = False
+
+    @property
+    def is_float(self) -> bool:
+        return self.type_id == CudaTypeId.Float
+
+    @property
+    def is_signed(self) -> bool:
+        return self.type_id == CudaTypeId.Signed
+
+    @property
+    def is_pointer(self) -> bool:
+        return self.type_id == CudaTypeId.Pointer
+
+
+@dataclass(frozen=True)
+class CudaPointerType:
+    elem: CudaType
+    bitwidth: int
+    type_id: CudaTypeId = CudaTypeId.Pointer
+    represents_predicate: bool = False
+
+    def __init__(self, elem: CudaType, bitwidth: int = 64) -> None:
+        object.__setattr__(self, "elem", elem)
+        object.__setattr__(self, "bitwidth", bitwidth)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CudaPointerType):
+            return False
+        return self.bitwidth == other.bitwidth and self.elem == other.elem
+
+    def __hash__(self) -> int:
+        return hash((self.bitwidth, self.type_id, self.elem))
+
+    @property
+    def is_float(self) -> bool:
+        return False
+
+    @property
+    def is_signed(self) -> bool:
+        return False
+
+    @property
+    def is_pointer(self) -> bool:
+        return True
 
 
 @dataclass(frozen=True)
@@ -115,6 +165,7 @@ class Load(KernelItem):
     dst: Var
     src: Var
     offset: int
+    is_param: bool = False
 
 
 @dataclass

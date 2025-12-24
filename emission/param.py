@@ -51,6 +51,6 @@ def emit_load(load: Load) -> str:
         else:
             ctype = "unsigned int"
 
-    base_ptr = f"reinterpret_cast<{ctype}*>(&{load.src.name})"
+    base_ptr = f"reinterpret_cast<{ctype}*>({('&' + load.src.name) if load.is_param else load.src.name})"
     rhs = f"{base_ptr}[{idx}]"
     return f"{load.dst.name} = {rhs};"
