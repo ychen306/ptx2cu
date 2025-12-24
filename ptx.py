@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC
+from enum import IntEnum
 from dataclasses import dataclass
 from typing import Optional
 
 
-class MemoryType:
+class MemoryType(IntEnum):
     Param = 0
     Global = 1
     Shared = 2
@@ -16,7 +17,7 @@ class Statement(ABC):
 
 
 @dataclass
-class MemoryDecl(ABC):
+class MemoryDecl(Statement):
     alignment: Optional[int]
     datatype: str
     name: str
@@ -31,8 +32,11 @@ class RegisterDecl:
     num_regs: int
 
 
+class Operand(ABC):
+    """Base class for an instruction operand"""
+
 @dataclass(frozen=True)
-class Register:
+class Register(Operand):
     prefix: str
     idx: Optional[int] = None
 
@@ -44,10 +48,6 @@ class BlockItem(ABC):
 @dataclass
 class InstructionBase(BlockItem):
     predicate: Optional[Register]
-
-
-class Operand(ABC):
-    """Base class for an instruction operand"""
 
 
 @dataclass

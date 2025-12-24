@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ptx
 
-from typing import Mapping
+from typing import Mapping, Optional
 
 import re
 

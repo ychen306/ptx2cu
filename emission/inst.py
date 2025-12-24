@@ -44,9 +44,9 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
 
         main_template = inline.template
         for var, temp in pred_temps.items():
-            ph = placeholder_for_expr_dict.get(id(var))
-            if ph:
-                main_template = main_template.replace(ph, f"%{temp}")
+            ph_opt: str | None = placeholder_for_expr_dict.get(id(var))
+            if ph_opt is not None:
+                main_template = main_template.replace(ph_opt, f"%{temp}")
 
         pre_lines.append(
             ".reg .pred " + ", ".join(f"%{t}" for t in pred_temps.values()) + ";"

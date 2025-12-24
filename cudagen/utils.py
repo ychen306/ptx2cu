@@ -17,7 +17,7 @@ def collect_registers(op: ptx.Operand) -> list[ptx.Register]:
 
 
 def render_operand_with_index(
-    operand: ptx.Operand,
+    operand: ptx.Operand | ptx.ParamRef,
     regmap: Mapping[ptx.Register, Var],
     args: list[Expr],
     idx: int,
