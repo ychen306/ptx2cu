@@ -71,6 +71,8 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
             ty = expr.get_type()
             if ty is None:
                 return "r"
+            if ty.bitwidth == 16:
+                return "h"
             if ty.is_float:
                 if ty.bitwidth == 64:
                     return "d"
@@ -79,8 +81,6 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
                 return "l"
             if ty.bitwidth == 32:
                 return "r"
-            if ty.bitwidth == 16:
-                return "h"
             if ty.bitwidth == 8:
                 return "b"
             return "r"
@@ -89,10 +89,18 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
             return "l"
         return "r"
 
+    def operand_ref(expr: Expr) -> str:
+        if isinstance(expr, Var):
+            ty = expr.get_type()
+            if ty is not None and ty.is_float and ty.bitwidth == 16:
+                return f"*(short *)&{expr.name}"
+            return expr.name
+        return str(expr)
+
     outputs = []
     for out_var in inline.outputs:
         c = constraint_for(out_var)
-        outputs.append(f'"+{c}"({out_var.name})')
+        outputs.append(f'"+{c}"({operand_ref(out_var)})')
 
     inputs = []
     addr_prep: list[str] = []
@@ -101,7 +109,7 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
             if arg in inline.outputs:
                 continue
             c = constraint_for(arg)
-            inputs.append(f'"{c}"({arg.name})')
+            inputs.append(f'"{c}"({operand_ref(arg)})')
         elif isinstance(arg, AddressOf):
             bw = arg.bitwidth or 64
             if bw != 64:

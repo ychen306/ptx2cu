@@ -58,6 +58,8 @@ def _ctype_for_type(ty: CudaType | CudaPointerType) -> str:
     if ty.is_float:
         if ty.bitwidth == 64:
             return "double"
+        if ty.bitwidth == 16:
+            return "__half"
         if ty.bitwidth == 32:
             return "float"
         raise ValueError(f"Unsupported float bitwidth: {ty.bitwidth}")

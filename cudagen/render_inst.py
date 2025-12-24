@@ -304,9 +304,18 @@ def emit_st_global(
         val_var = regmap.get(value_op)
         if val_var is None:
             return None
-        value_expr: Expr = (
-            val_var if val_var.get_type() == target_ty else BitCast(target_ty, val_var)
-        )
+        val_ty = val_var.get_type()
+        if val_ty != target_ty:
+            # Do not attempt unsupported half/int bitcasts; fall back to asm.
+            if (
+                target_ty.bitwidth == 16
+                and isinstance(val_ty, CudaType)
+                and val_ty.is_float != target_ty.is_float
+            ):
+                return None
+            value_expr = BitCast(target_ty, val_var)
+        else:
+            value_expr = val_var
     else:
         try:
             imm_val = int(value_op.value, 0)

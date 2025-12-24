@@ -185,3 +185,28 @@ def test_emit_inline_asm_string_store_has_inputs_only():
     assert ':+f"(f4)' not in s
     assert '"f"(f4)' in s
     assert '"l"(rd7)' in s
+
+
+def test_emit_inline_asm_half_operand_uses_short_cast():
+    thalf = CudaType(16, CudaTypeId.Float)
+    regmap = {
+        ptx.Register(prefix="rs", idx=1): Var("rs1", thalf),
+        ptx.Register(prefix="rs", idx=2): Var("rs2", thalf),
+        ptx.Register(prefix="rs", idx=3): Var("rs3", thalf),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mul.f16",
+        operands=[
+            ptx.Register(prefix="rs", idx=1),
+            ptx.Register(prefix="rs", idx=2),
+            ptx.Register(prefix="rs", idx=3),
+        ],
+    )
+    from cudagen.render_inst import emit_inline_asm
+
+    s = emit_inline_asm_ir(emit_inline_asm(instr, regmap))
+    # Both inputs and output should use *(short *)&var to satisfy h constraint
+    assert "*(short *)&rs1" in s
+    assert "*(short *)&rs2" in s
+    assert "*(short *)&rs3" in s

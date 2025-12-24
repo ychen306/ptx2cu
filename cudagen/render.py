@@ -75,6 +75,10 @@ class CudaGen:
             bitwidth = 32
             type_id = CudaTypeId.Unsigned
             represents_predicate = True
+        elif dt.startswith("b16"):
+            bitwidth = 16
+            type_id = CudaTypeId.Float
+            represents_predicate = False
         elif dt.startswith("f"):
             # float types
             if dt.startswith("f16"):
@@ -83,6 +87,10 @@ class CudaGen:
                 bitwidth = 64
             else:
                 bitwidth = 32
+            type_id = CudaTypeId.Float
+            represents_predicate = False
+        elif dt == "u16":
+            bitwidth = 16
             type_id = CudaTypeId.Float
             represents_predicate = False
         else:

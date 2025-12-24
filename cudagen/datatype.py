@@ -10,8 +10,10 @@ def ctype_for_datatype(datatype: str) -> str:
         return "unsigned char"
     if dt.startswith("s8"):
         return "signed char"
-    if dt.startswith(("u16", "b16")):
-        return "unsigned short"
+    if dt.startswith("b16"):
+        return "__half"
+    if dt.startswith("u16"):
+        return "__half"
     if dt.startswith("s16"):
         return "short"
     if dt.startswith("f16"):
@@ -53,5 +55,5 @@ def type_info_for_datatype(datatype: str) -> tuple[str, int, bool]:
     ctype = ctype_for_datatype(datatype)
     size = sizeof_datatype(datatype)
     bitwidth = size * 8
-    is_float = datatype.startswith("f")
+    is_float = datatype.startswith("f") or datatype.startswith("b16") or datatype.startswith("u16")
     return ctype, bitwidth, is_float
