@@ -147,7 +147,7 @@ def emit_binary_expr(
         ),
         represents_predicate=False,
     )
-    if target_ty.bitwidth == 16:
+    if target_ty.bitwidth == 16 and target_ty.type_id != CudaTypeId.Float:
         return None
 
     mnemonic = _get_mnemonic(instr.opcode)
@@ -176,6 +176,16 @@ def emit_binary_expr(
         return None
     if not is_float_opcode and op in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
         return None
+    # Bail if we'd need to mix int16 with float16 (unsupported)
+    if target_ty.bitwidth == 16 and target_ty.type_id == CudaTypeId.Float:
+        if isinstance(src1_op, ptx.Register):
+            src1_var = regmap.get(src1_op)
+            if src1_var is None or (
+                src1_var.get_type() is not None
+                and src1_var.get_type().bitwidth == 16
+                and src1_var.get_type().type_id != CudaTypeId.Float
+            ):
+                return None
 
     op_a: Expr = src0 if src0.get_type() == target_ty else BitCast(target_ty, src0)
     if isinstance(src1_op, ptx.Register):

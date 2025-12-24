@@ -96,3 +96,24 @@ def test_emit_store_basic():
         value=Var("r2", t_i32),
     )
     assert emit_store(store) == "rd1[1] = r2;"
+
+
+def test_emit_assignment_from_add_f16():
+    thalf = CudaType(16, CudaTypeId.Float)
+    regmap = {
+        ptx.Register(prefix="rs", idx=1): Var("rs1", thalf),
+        ptx.Register(prefix="rs", idx=2): Var("rs2", thalf),
+        ptx.Register(prefix="rs", idx=3): Var("rs3", thalf),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="add.f16",
+        operands=[
+            ptx.Register(prefix="rs", idx=1),
+            ptx.Register(prefix="rs", idx=2),
+            ptx.Register(prefix="rs", idx=3),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert assignment is not None
+    assert emit_assignment_stmt(assignment) == "rs1 = (rs2 + rs3);"

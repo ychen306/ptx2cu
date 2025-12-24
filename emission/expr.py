@@ -91,6 +91,8 @@ def emit_expr(expr: Expr) -> str:
             and src_ty.bitwidth == dst_ty.bitwidth
         ):
             return f"({ _ctype_for_type(dst_ty) })({emit_expr(expr.operand)})"
+        if dst_ty.is_float and dst_ty.bitwidth == 16:
+            raise ValueError("16-bit float bitcasts are not supported in emission")
         intrinsic = (
             _bitcast_intrinsic(src_ty, dst_ty)
             if isinstance(src_ty, CudaType) and isinstance(dst_ty, CudaType)

@@ -270,6 +270,29 @@ def test_emit_ld_global_with_pointer_bitcast():
     assert load.offset == 0
 
 
+def test_emit_assignment_add_f16():
+    thalf = CudaType(16, CudaTypeId.Float)
+    regmap = {
+        ptx.Register(prefix="rs", idx=1): Var("rs1", thalf),
+        ptx.Register(prefix="rs", idx=2): Var("rs2", thalf),
+        ptx.Register(prefix="rs", idx=3): Var("rs3", thalf),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="add.f16",
+        operands=[
+            ptx.Register(prefix="rs", idx=1),
+            ptx.Register(prefix="rs", idx=2),
+            ptx.Register(prefix="rs", idx=3),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert assignment.lhs == Var("rs1", thalf)
+    assert isinstance(assignment.rhs, BinaryOperator)
+    assert assignment.rhs.opcode == BinaryOpcode.FAdd
+
+
 def test_emit_st_global_basic():
     instr = ptx.Instruction(
         predicate=None,
