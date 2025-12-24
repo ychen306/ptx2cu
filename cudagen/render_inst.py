@@ -216,8 +216,6 @@ def emit_ld_global(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -
     op_suffix = instr.opcode.split(".")[-1]
     elem_type = op_suffix if op_suffix != "global" else "u32"
     _, bitwidth, is_float = type_info_for_datatype(elem_type)
-    if bitwidth == 16:
-        return None
     target_ty = CudaType(
         bitwidth=bitwidth,
         type_id=CudaTypeId.Float if is_float else CudaTypeId.Unsigned,

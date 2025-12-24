@@ -67,6 +67,8 @@ def _ctype_for_type(ty: CudaType | CudaPointerType) -> str:
         return "long long" if ty.is_signed else "unsigned long long"
     if ty.bitwidth == 32:
         return "int" if ty.is_signed else "unsigned int"
+    if ty.bitwidth == 16:
+        return "short" if ty.is_signed else "unsigned short"
     raise ValueError(f"Unsupported integer bitwidth: {ty.bitwidth}")
 
 
