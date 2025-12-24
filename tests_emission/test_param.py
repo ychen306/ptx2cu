@@ -1,6 +1,6 @@
 import ptx
 from cudagen import Load, emit_ld_param
-from cudagen.types import MemoryDecl, Var
+from cudagen.types import MemoryDecl, Var, CudaType
 from emission.param import emit_load, get_type_decl_for_param
 
 
@@ -39,7 +39,7 @@ def test_emit_load_scalar_from_ld_param():
             ptx.MemoryRef(base=ptx.ParamRef(name="p0"), offset=0),
         ],
     )
-    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", CudaType(32, False))}
     param_map = {
         "p0": MemoryDecl(
             alignment=None,
@@ -63,7 +63,7 @@ def test_emit_load_array_offset():
             ptx.MemoryRef(base=ptx.ParamRef(name="arr"), offset=4),
         ],
     )
-    regmap = {ptx.Register(prefix="r", idx=2): Var("r2", 32, False)}
+    regmap = {ptx.Register(prefix="r", idx=2): Var("r2", CudaType(32, False))}
     param_map = {
         "arr": MemoryDecl(
             alignment=None,

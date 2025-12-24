@@ -1,5 +1,5 @@
 import ptx
-from cudagen.types import CudaModule, CudaKernel, Var
+from cudagen.types import CudaModule, CudaKernel, Var, CudaType
 from emission.module import emit_cuda_module
 
 
@@ -20,7 +20,7 @@ def test_emit_cuda_module_with_globals_and_kernel():
     )
     kernel = CudaKernel(
         name="k",
-        arguments=[(Var("p0", 32, False), arg_decl)],
+        arguments=[(Var("p0", CudaType(32, False)), arg_decl)],
         var_decls=[],
         body=[],
     )

@@ -1,13 +1,18 @@
 import ptx
-from cudagen import Var
+from cudagen.types import Var, CudaType
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 from emission.inst import emit_inline_asm_ir
+
+t32 = CudaType(32, False)
+t64 = CudaType(64, False)
+tf32 = CudaType(32, True)
+tpred = CudaType(32, False, True)
 
 
 def test_emit_inline_asm_string_basic():
     regmap = {
-        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
-        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
     }
     instr = ptx.Instruction(
         predicate=None,
@@ -26,14 +31,14 @@ def test_emit_inline_asm_string_basic():
 
 def test_emit_inline_asm_string_wgmma():
     regs = [ptx.Register(prefix="r", idx=i) for i in range(1, 5)]
-    regmap = {r: Var(f"{r.prefix}{r.idx}", 32, False) for r in regs}
+    regmap = {r: Var(f"{r.prefix}{r.idx}", t32) for r in regs}
     regmap.update(
         {
-            ptx.Register(prefix="rd", idx=74): Var("rd74", 64, False),
-            ptx.Register(prefix="rd", idx=79): Var("rd79", 64, False),
+            ptx.Register(prefix="rd", idx=74): Var("rd74", t64),
+            ptx.Register(prefix="rd", idx=79): Var("rd79", t64),
         }
     )
-    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
+    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", tpred)
 
     instr = ptx.Instruction(
         predicate=None,
@@ -69,10 +74,10 @@ def test_parse_and_emit_wgmma():
 
     instr = parse_instruction(line)
     regs = list(instr.operands[0].values)
-    regmap = {r: Var(f"{r.prefix}{r.idx}", 32, False) for r in regs}
-    regmap[ptx.Register(prefix="rd", idx=86)] = Var("rd86", 64, False)
-    regmap[ptx.Register(prefix="rd", idx=91)] = Var("rd91", 64, False)
-    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", 32, False, True)
+    regmap = {r: Var(f"{r.prefix}{r.idx}", t32) for r in regs}
+    regmap[ptx.Register(prefix="rd", idx=86)] = Var("rd86", t64)
+    regmap[ptx.Register(prefix="rd", idx=91)] = Var("rd91", t64)
+    regmap[ptx.Register(prefix="p", idx=None)] = Var("p", tpred)
 
     from cudagen.render_inst import emit_inline_asm
 
@@ -84,7 +89,7 @@ def test_parse_and_emit_wgmma():
 
 
 def test_emit_inline_asm_string_with_memory_symbol():
-    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", t32)}
     mem_decl = MemoryDecl(
         alignment=None,
         datatype="u32",
@@ -110,7 +115,7 @@ def test_emit_inline_asm_string_with_memory_symbol():
 
 
 def test_emit_inline_asm_string_with_memory_symbol_32bit_addr():
-    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", 32, False)}
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", t32)}
     mem_decl = MemoryDecl(
         alignment=None,
         datatype="u32",
@@ -138,9 +143,9 @@ def test_emit_inline_asm_string_with_memory_symbol_32bit_addr():
 def test_emit_inline_asm_string_predicate_placeholder_not_reused():
     # Regression: ensure placeholder is assigned once per Var
     regmap = {
-        ptx.Register(prefix="p", idx=None): Var("p1", 32, False, True),
-        ptx.Register(prefix="r", idx=1): Var("r1", 32, False),
-        ptx.Register(prefix="r", idx=2): Var("r2", 32, False),
+        ptx.Register(prefix="p", idx=None): Var("p1", tpred),
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
     }
     instr = ptx.Instruction(
         predicate=None,
@@ -161,8 +166,8 @@ def test_emit_inline_asm_string_predicate_placeholder_not_reused():
 
 def test_emit_inline_asm_string_store_has_inputs_only():
     regmap = {
-        ptx.Register(prefix="f", idx=4): Var("f4", 32, True),
-        ptx.Register(prefix="rd", idx=7): Var("rd7", 64, False),
+        ptx.Register(prefix="f", idx=4): Var("f4", tf32),
+        ptx.Register(prefix="rd", idx=7): Var("rd7", t64),
     }
     instr = ptx.Instruction(
         predicate=None,

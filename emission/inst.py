@@ -31,7 +31,7 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
     pred_vars = [
         var
         for var, _ in placeholder_for_expr
-        if isinstance(var, Var) and var.represents_predicate
+        if isinstance(var, Var) and var.ty.represents_predicate
     ]
 
     final_template = inline.template
@@ -66,17 +66,17 @@ def emit_inline_asm_ir(inline: IRInlineAsm) -> str:
 
     def constraint_for(expr: Expr) -> str:
         if isinstance(expr, Var):
-            if expr.is_float:
-                if expr.bitwidth == 64:
+            if expr.ty.is_float:
+                if expr.ty.bitwidth == 64:
                     return "d"
                 return "f"
-            if expr.bitwidth == 64:
+            if expr.ty.bitwidth == 64:
                 return "l"
-            if expr.bitwidth == 32:
+            if expr.ty.bitwidth == 32:
                 return "r"
-            if expr.bitwidth == 16:
+            if expr.ty.bitwidth == 16:
                 return "h"
-            if expr.bitwidth == 8:
+            if expr.ty.bitwidth == 8:
                 return "b"
             return "r"
         if isinstance(expr, AddressOf):

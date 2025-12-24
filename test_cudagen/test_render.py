@@ -2,6 +2,10 @@ import ptx
 import pytest
 
 from cudagen import CudaGen, Var
+from cudagen.types import CudaType
+
+t32 = CudaType(32, False)
+t_pred = CudaType(32, False, True)
 
 
 def test_enter_and_exit_scope_basic():
@@ -12,14 +16,14 @@ def test_enter_and_exit_scope_basic():
     gen.enter_scope(block)
     r0 = ptx.Register(prefix="r", idx=0)
     r1 = ptx.Register(prefix="r", idx=1)
-    assert gen.reg_map[r0] == Var("r0", 32, False)
-    assert gen.reg_map[r1] == Var("r1", 32, False)
-    assert gen.var_decls == [Var("r0", 32, False), Var("r1", 32, False)]
+    assert gen.reg_map[r0] == Var("r0", t32)
+    assert gen.reg_map[r1] == Var("r1", t32)
+    assert gen.var_decls == [Var("r0", t32), Var("r1", t32)]
     gen.exit_scope()
     with pytest.raises(KeyError):
         _ = gen.reg_map[r0]
     # var_decls persists across scope exits
-    assert gen.var_decls == [Var("r0", 32, False), Var("r1", 32, False)]
+    assert gen.var_decls == [Var("r0", t32), Var("r1", t32)]
 
 
 def test_nested_scopes_shadowing():
@@ -52,5 +56,5 @@ def test_predicate_registers_get_predicate_flag():
     gen.enter_scope(block)
     preg = ptx.Register(prefix="p", idx=None)
     var = gen.reg_map[preg]
-    assert var.represents_predicate is True
-    assert var.bitwidth == 32
+    assert var.ty.represents_predicate is True
+    assert var.ty.bitwidth == 32

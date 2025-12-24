@@ -1,8 +1,19 @@
 import ptx
-from cudagen.types import CudaKernel, Var, InlineAsm, Load, CudaBranch, CudaLabel
+from cudagen.types import (
+    CudaKernel,
+    Var,
+    InlineAsm,
+    Load,
+    CudaBranch,
+    CudaLabel,
+    CudaType,
+)
 from emission.kernel_body import emit_kernel
 from emission.param import get_type_decl_for_param
 from emission.branch import emit_branch_string
+
+
+t32 = CudaType(32, False)
 
 
 def test_emit_kernel_simple():
@@ -15,25 +26,24 @@ def test_emit_kernel_simple():
     )
     kernel = CudaKernel(
         name="k",
-        arguments=[(Var("p0", 32, False), arg_decl)],
-        var_decls=[Var("r0", 32, False)],
+        arguments=[(Var("p0", t32), arg_decl)],
+        var_decls=[Var("r0", t32)],
         body=[
             Load(
-                bitwidth=32,
-                is_float=False,
-                dst=Var("r0", 32, False),
-                src=Var("p0", 32, False),
+                ty=t32,
+                dst=Var("r0", t32),
+                src=Var("p0", t32),
                 offset=0,
             ),
             CudaLabel(name="L0"),
             InlineAsm(
                 template="add.s32 %0, %1, %2;",
                 arguments=[
-                    Var("r0", 32, False),
-                    Var("r0", 32, False),
-                    Var("r0", 32, False),
+                    Var("r0", t32),
+                    Var("r0", t32),
+                    Var("r0", t32),
                 ],
-                outputs=[Var("r0", 32, False)],
+                outputs=[Var("r0", t32)],
             ),
             CudaBranch(cond=None, target=CudaLabel(name="L0")),
         ],

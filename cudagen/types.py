@@ -13,11 +13,16 @@ class Expr(ABC):
 
 
 @dataclass(frozen=True)
-class Var(Expr):
-    name: str
+class CudaType:
     bitwidth: int
     is_float: bool
     represents_predicate: bool = False
+
+
+@dataclass(frozen=True)
+class Var(Expr):
+    name: str
+    ty: CudaType
 
 class BinaryOpcode(IntEnum):
     pass
@@ -53,8 +58,7 @@ class Load(KernelItem):
     assuming everything is byte-typed
     """
 
-    bitwidth: int
-    is_float: bool
+    ty: CudaType
     dst: Var
     src: Var
     offset: int

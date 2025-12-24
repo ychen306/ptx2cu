@@ -5,7 +5,7 @@ from typing import List
 
 import ptx
 
-from .types import CudaKernel, CudaLabel, Var, CudaModule, Return
+from .types import CudaKernel, CudaLabel, Var, CudaModule, Return, CudaType
 from .render_branch import emit_branch
 from .render_inst import emit_inline_asm
 from .render_param import emit_ld_param
@@ -33,16 +33,17 @@ class CudaGen:
         Seed the root reg_map with PTX special registers mapped to CUDA built-ins.
         These are inputs-only and are not added to var_decls or name counters.
         """
+        scalar_i32 = CudaType(bitwidth=32, is_float=False)
         special = {
-            ptx.Register(prefix="ctaid.x", idx=None): Var("blockIdx.x", 32, False),
-            ptx.Register(prefix="ctaid.y", idx=None): Var("blockIdx.y", 32, False),
-            ptx.Register(prefix="ctaid.z", idx=None): Var("blockIdx.z", 32, False),
-            ptx.Register(prefix="tid.x", idx=None): Var("threadIdx.x", 32, False),
-            ptx.Register(prefix="tid.y", idx=None): Var("threadIdx.y", 32, False),
-            ptx.Register(prefix="tid.z", idx=None): Var("threadIdx.z", 32, False),
-            ptx.Register(prefix="ntid.x", idx=None): Var("blockDim.x", 32, False),
-            ptx.Register(prefix="ntid.y", idx=None): Var("blockDim.y", 32, False),
-            ptx.Register(prefix="ntid.z", idx=None): Var("blockDim.z", 32, False),
+            ptx.Register(prefix="ctaid.x", idx=None): Var("blockIdx.x", scalar_i32),
+            ptx.Register(prefix="ctaid.y", idx=None): Var("blockIdx.y", scalar_i32),
+            ptx.Register(prefix="ctaid.z", idx=None): Var("blockIdx.z", scalar_i32),
+            ptx.Register(prefix="tid.x", idx=None): Var("threadIdx.x", scalar_i32),
+            ptx.Register(prefix="tid.y", idx=None): Var("threadIdx.y", scalar_i32),
+            ptx.Register(prefix="tid.z", idx=None): Var("threadIdx.z", scalar_i32),
+            ptx.Register(prefix="ntid.x", idx=None): Var("blockDim.x", scalar_i32),
+            ptx.Register(prefix="ntid.y", idx=None): Var("blockDim.y", scalar_i32),
+            ptx.Register(prefix="ntid.z", idx=None): Var("blockDim.z", scalar_i32),
         }
         self.reg_map = ChainMap(special)
 
@@ -84,12 +85,8 @@ class CudaGen:
             is_float = False
             represents_predicate = False
 
-        var = Var(
-            name=name,
-            bitwidth=bitwidth,
-            is_float=is_float,
-            represents_predicate=represents_predicate,
-        )
+        ty = CudaType(bitwidth=bitwidth, is_float=is_float, represents_predicate=represents_predicate)
+        var = Var(name=name, ty=ty)
         self.var_decls.append(var)
         return var
 
@@ -129,12 +126,7 @@ class CudaGen:
         arguments: list[tuple[Var, ptx.MemoryDecl]] = []
         for p in entry.params:
             _, bitwidth, is_float = type_info_for_datatype(p.datatype)
-            arg_var = Var(
-                name=p.name,
-                bitwidth=bitwidth,
-                is_float=is_float,
-                represents_predicate=False,
-            )
+            arg_var = Var(name=p.name, ty=CudaType(bitwidth=bitwidth, is_float=is_float))
             arguments.append((arg_var, p))
 
         body_items: list = []

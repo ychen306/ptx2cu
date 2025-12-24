@@ -28,25 +28,25 @@ def emit_load(load: Load) -> str:
     """
     Emit C code for a Load IR node as an assignment string.
     """
-    elem_size = load.bitwidth // 8
+    elem_size = load.ty.bitwidth // 8
     if load.offset % elem_size != 0:
         raise ValueError("Unaligned load offset")
     idx = load.offset // elem_size
 
-    if load.is_float:
+    if load.ty.is_float:
         ctype = (
             "double"
-            if load.bitwidth == 64
-            else ("float" if load.bitwidth == 32 else "__half")
+            if load.ty.bitwidth == 64
+            else ("float" if load.ty.bitwidth == 32 else "__half")
         )
     else:
-        if load.bitwidth == 64:
+        if load.ty.bitwidth == 64:
             ctype = "unsigned long long"
-        elif load.bitwidth == 32:
+        elif load.ty.bitwidth == 32:
             ctype = "unsigned int"
-        elif load.bitwidth == 16:
+        elif load.ty.bitwidth == 16:
             ctype = "unsigned short"
-        elif load.bitwidth == 8:
+        elif load.ty.bitwidth == 8:
             ctype = "unsigned char"
         else:
             ctype = "unsigned int"

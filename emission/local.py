@@ -4,21 +4,21 @@ from cudagen.types import Var
 
 
 def ctype_for_var(var: Var) -> str:
-    if var.represents_predicate:
+    if var.ty.represents_predicate:
         return "unsigned int"
-    if var.is_float:
-        if var.bitwidth == 64:
+    if var.ty.is_float:
+        if var.ty.bitwidth == 64:
             return "double"
-        if var.bitwidth == 16:
+        if var.ty.bitwidth == 16:
             return "__half"
         return "float"
-    if var.bitwidth == 64:
+    if var.ty.bitwidth == 64:
         return "unsigned long long"
-    if var.bitwidth == 32:
+    if var.ty.bitwidth == 32:
         return "unsigned int"
-    if var.bitwidth == 16:
+    if var.ty.bitwidth == 16:
         return "unsigned short"
-    if var.bitwidth == 8:
+    if var.ty.bitwidth == 8:
         return "unsigned char"
     return "unsigned int"
 

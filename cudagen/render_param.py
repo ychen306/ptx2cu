@@ -5,7 +5,7 @@ from typing import Mapping
 import ptx
 
 from .datatype import type_info_for_datatype, ctype_for_datatype
-from .types import Load, MemoryDecl, Var
+from .types import Load, MemoryDecl, Var, CudaType
 
 
 def emit_ld_param(
@@ -52,10 +52,6 @@ def emit_ld_param(
         raise ValueError(f"Missing mapping for dest register {dest}")
     lhs = dest_var
 
-    src_var = Var(
-        name=decl.name, bitwidth=bitwidth, is_float=is_float, represents_predicate=False
-    )
+    src_var = Var(name=decl.name, ty=CudaType(bitwidth=bitwidth, is_float=is_float))
 
-    return Load(
-        bitwidth=bitwidth, is_float=is_float, dst=lhs, src=src_var, offset=offset
-    )
+    return Load(ty=CudaType(bitwidth=bitwidth, is_float=is_float), dst=lhs, src=src_var, offset=offset)
