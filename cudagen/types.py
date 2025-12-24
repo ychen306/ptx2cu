@@ -32,6 +32,7 @@ class BinaryOpcode(Enum):
     # integer 
     Add = auto()
     Sub = auto()
+    Mul = auto()
     SDiv = auto()
     UDiv = auto()
 

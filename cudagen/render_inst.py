@@ -6,7 +6,7 @@ from typing import Mapping, Optional
 
 import re
 
-from .types import InlineAsm, Var, Expr, AddressOf
+from .types import InlineAsm, Var, Expr, AddressOf, BinaryOpcode, BinaryOperator, Assignment
 from .utils import collect_registers, render_operand_with_index
 
 
@@ -31,6 +31,77 @@ def _opcode_bitwidth(opcode: str) -> Optional[int]:
     if not m:
         return None
     return int(m[-1])
+
+
+def _get_mnemonic(opcode: str) -> str:
+    """
+    Strip type suffixes and keep relevant modifier (e.g., mul.lo).
+    """
+    parts = opcode.split(".")
+    if not parts:
+        return opcode
+    if parts[0] == "mul" and len(parts) > 1 and parts[1] in {"lo", "hi", "wide"}:
+        return f"{parts[0]}.{parts[1]}"
+    return parts[0]
+
+
+def emit_assignment(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Assignment]:
+    """
+    Attempt to lower a PTX instruction into a pure CUDA assignment (BinaryOperator).
+    Returns None if the opcode/shape is unsupported.
+    """
+    if instr.predicate is not None:
+        return None
+    if len(instr.operands) < 3:
+        return None
+
+    dest_op, src0_op, src1_op = instr.operands[0:3]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    if not isinstance(src0_op, ptx.Register) or not isinstance(src1_op, ptx.Register):
+        return None
+
+    dest = regmap.get(dest_op)
+    src0 = regmap.get(src0_op)
+    src1 = regmap.get(src1_op)
+    if dest is None or src0 is None or src1 is None:
+        return None
+
+    ty = dest.get_type()
+    if ty is None or ty != src0.get_type() or ty != src1.get_type():
+        return None
+
+    mnemonic = _get_mnemonic(instr.opcode)
+    if mnemonic == "mul.wide":
+        return None
+
+    opcode_map: dict[str, BinaryOpcode] = {
+        "add": BinaryOpcode.FAdd if ty.is_float else BinaryOpcode.Add,
+        "and": BinaryOpcode.And,
+        "or": BinaryOpcode.Or,
+        "xor": BinaryOpcode.Xor,
+        "shl": BinaryOpcode.Shl,
+        "mul": BinaryOpcode.FMul if ty.is_float else BinaryOpcode.Mul,
+        "mul.lo": BinaryOpcode.Mul,
+        "shr": BinaryOpcode.AShr if "s" in instr.opcode.split(".") else BinaryOpcode.LShr,
+    }
+
+    op = opcode_map.get(mnemonic)
+    if op is None:
+        return None
+
+    # Basic float/int consistency guard
+    if ty.is_float and op not in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
+        return None
+    if not ty.is_float and op in {BinaryOpcode.FAdd, BinaryOpcode.FMul}:
+        return None
+
+    return Assignment(
+        lhs=dest,
+        rhs=BinaryOperator(opcode=op, operand_a=src0, operand_b=src1),
+    )
 
 
 def emit_inline_asm(

@@ -2,7 +2,8 @@ import pytest
 
 import ptx
 from cudagen import InlineAsm, Var, emit_inline_asm
-from cudagen.types import CudaType
+from cudagen.types import CudaType, Assignment, BinaryOperator, BinaryOpcode
+from cudagen.render_inst import emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, False)
@@ -123,3 +124,44 @@ def test_emit_inline_asm_with_memory_symbol():
     assert asm.template == "mov.u32 %0, %1;"
     assert asm.arguments[1].symbol.decl is mem_decl
     assert asm.arguments[1].bitwidth == 32
+
+
+def test_emit_assignment_add():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="add.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert assignment.lhs == Var("r1", t32)
+    assert assignment.rhs == BinaryOperator(
+        opcode=BinaryOpcode.Add, operand_a=Var("r2", t32), operand_b=Var("r3", t32)
+    )
+
+
+def test_emit_assignment_reject_mul_wide():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mul.wide.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assert emit_assignment(instr, regmap) is None
