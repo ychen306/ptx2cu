@@ -28,6 +28,8 @@ def test_end_to_end_snapshot(name: str, fixture_path: Path) -> None:
     if os.getenv("UPDATE_SNAPSHOTS") == "1":
         snap_path.write_text(out)
 
-    assert snap_path.exists(), f"Missing snapshot {snap_path} (run with UPDATE_SNAPSHOTS=1 to create)"
+    assert (
+        snap_path.exists()
+    ), f"Missing snapshot {snap_path} (run with UPDATE_SNAPSHOTS=1 to create)"
     expected = snap_path.read_text()
     assert out == expected

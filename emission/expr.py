@@ -89,7 +89,11 @@ def emit_expr(expr: Expr) -> str:
             and src_ty.bitwidth == dst_ty.bitwidth
         ):
             return f"({ _ctype_for_type(dst_ty) })({emit_expr(expr.operand)})"
-        intrinsic = _bitcast_intrinsic(src_ty, dst_ty) if isinstance(src_ty, CudaType) and isinstance(dst_ty, CudaType) else None
+        intrinsic = (
+            _bitcast_intrinsic(src_ty, dst_ty)
+            if isinstance(src_ty, CudaType) and isinstance(dst_ty, CudaType)
+            else None
+        )
         if intrinsic is None and isinstance(dst_ty, CudaPointerType):
             return f"reinterpret_cast<{_ctype_for_type(dst_ty)}>({emit_expr(expr.operand)})"
         if intrinsic is None:

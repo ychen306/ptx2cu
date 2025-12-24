@@ -35,6 +35,7 @@ class RegisterDecl:
 class Operand(ABC):
     """Base class for an instruction operand"""
 
+
 @dataclass(frozen=True)
 class Register(Operand):
     prefix: str

@@ -3,7 +3,9 @@ from emission.local import declare_local
 
 
 def test_declare_local_ints_and_predicate():
-    assert declare_local(Var("a", CudaType(32, CudaTypeId.Unsigned))) == "unsigned int a;"
+    assert (
+        declare_local(Var("a", CudaType(32, CudaTypeId.Unsigned))) == "unsigned int a;"
+    )
     assert (
         declare_local(Var("b", CudaType(64, CudaTypeId.Unsigned)))
         == "unsigned long long b;"

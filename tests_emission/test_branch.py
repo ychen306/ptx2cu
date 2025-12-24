@@ -8,5 +8,8 @@ def test_emit_branch_string_unconditional():
 
 
 def test_emit_branch_string_conditional():
-    br = CudaBranch(cond=Var("p1", CudaType(32, CudaTypeId.Unsigned, True)), target=CudaLabel(name="L2"))
+    br = CudaBranch(
+        cond=Var("p1", CudaType(32, CudaTypeId.Unsigned, True)),
+        target=CudaLabel(name="L2"),
+    )
     assert emit_branch_string(br) == "if (p1 != 0) goto L2;"

@@ -57,4 +57,8 @@ def test_emit_expr_bitcast_double_to_longlong():
 
 def test_emit_expr_bitcast_unsupported():
     with pytest.raises(ValueError):
-        emit_expr(BitCast(new_type=t_i32, operand=Var("h1", CudaType(16, CudaTypeId.Unsigned))))
+        emit_expr(
+            BitCast(
+                new_type=t_i32, operand=Var("h1", CudaType(16, CudaTypeId.Unsigned))
+            )
+        )

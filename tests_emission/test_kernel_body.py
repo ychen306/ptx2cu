@@ -29,14 +29,14 @@ def test_emit_kernel_simple():
         name="k",
         arguments=[(Var("p0", t32), arg_decl)],
         var_decls=[Var("r0", t32)],
-            body=[
-                Load(
-                    ty=t32,
-                    dst=Var("r0", t32),
-                    src=Var("p0", t32),
-                    offset=0,
-                    is_param=True,
-                ),
+        body=[
+            Load(
+                ty=t32,
+                dst=Var("r0", t32),
+                src=Var("p0", t32),
+                offset=0,
+                is_param=True,
+            ),
             CudaLabel(name="L0"),
             InlineAsm(
                 template="add.s32 %0, %1, %2;",

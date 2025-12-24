@@ -79,8 +79,9 @@ class Var(Expr):
     def get_type(self) -> Optional[CudaType]:
         return self.ty
 
+
 class BinaryOpcode(Enum):
-    # integer 
+    # integer
     Add = auto()
     Sub = auto()
     Mul = auto()
@@ -100,15 +101,17 @@ class BinaryOpcode(Enum):
     AShr = auto()
     Xor = auto()
 
+
 @dataclass
 class BinaryOperator(Expr):
-    opcode : BinaryOpcode
-    operand_a  : Expr
-    operand_b : Expr
+    opcode: BinaryOpcode
+    operand_a: Expr
+    operand_b: Expr
 
     def get_type(self):
         assert self.operand_a.get_type() == self.operand_b.get_type()
         return self.operand_a.get_type()
+
 
 @dataclass
 class ConstantInt(Expr):
@@ -117,6 +120,7 @@ class ConstantInt(Expr):
 
     def get_type(self) -> Optional[CudaType]:
         return self.ty
+
 
 @dataclass
 class BitCast(Expr):
@@ -148,10 +152,11 @@ class InlineAsm(KernelItem):
     outputs: list[Var]
     clobbers_memory: bool = False
 
+
 @dataclass
 class Assignment(KernelItem):
-    lhs : Var
-    rhs : Expr
+    lhs: Var
+    rhs: Expr
 
 
 @dataclass
@@ -166,6 +171,14 @@ class Load(KernelItem):
     src: Expr
     offset: int
     is_param: bool = False
+
+
+@dataclass
+class Store(KernelItem):
+    """*pointer = value"""
+
+    pointer: Expr
+    value: Expr
 
 
 @dataclass

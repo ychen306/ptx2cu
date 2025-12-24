@@ -83,7 +83,11 @@ def emit_assignment(
     dest = regmap.get(dest_op)
     src0 = regmap.get(src0_op)
     src1 = regmap.get(src1_op) if isinstance(src1_op, ptx.Register) else None
-    if dest is None or src0 is None or (isinstance(src1_op, ptx.Register) and src1 is None):
+    if (
+        dest is None
+        or src0 is None
+        or (isinstance(src1_op, ptx.Register) and src1 is None)
+    ):
         return None
 
     rhs = emit_binary_expr(instr, regmap)
@@ -157,7 +161,9 @@ def emit_binary_expr(
         "shl": BinaryOpcode.Shl,
         "mul": BinaryOpcode.FMul if is_float_opcode else BinaryOpcode.Mul,
         "mul.lo": BinaryOpcode.Mul,
-        "shr": BinaryOpcode.AShr if "s" in instr.opcode.split(".") else BinaryOpcode.LShr,
+        "shr": (
+            BinaryOpcode.AShr if "s" in instr.opcode.split(".") else BinaryOpcode.LShr
+        ),
     }
 
     op = opcode_map.get(mnemonic)
@@ -176,7 +182,9 @@ def emit_binary_expr(
         if src1_var is None:
             return None
         op_b: Expr = (
-            src1_var if src1_var.get_type() == target_ty else BitCast(target_ty, src1_var)
+            src1_var
+            if src1_var.get_type() == target_ty
+            else BitCast(target_ty, src1_var)
         )
     else:
         # immediate
@@ -189,7 +197,9 @@ def emit_binary_expr(
     return BinaryOperator(opcode=op, operand_a=op_a, operand_b=op_b)
 
 
-def emit_ld_global(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -> Optional[Load]:
+def emit_ld_global(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Load]:
     """
     Lower ld.global.* into a Load IR node. Returns None if unsupported.
     """
@@ -204,7 +214,9 @@ def emit_ld_global(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -
     src_op = instr.operands[1]
     if not isinstance(dest_op, ptx.Register):
         return None
-    if not isinstance(src_op, ptx.MemoryRef) or not isinstance(src_op.base, ptx.Register):
+    if not isinstance(src_op, ptx.MemoryRef) or not isinstance(
+        src_op.base, ptx.Register
+    ):
         return None
 
     dest_var = regmap.get(dest_op)
@@ -235,7 +247,9 @@ def emit_ld_global(instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]) -
     if not isinstance(base_ty, CudaPointerType) or base_ty.elem != target_ty:
         base_expr = BitCast(new_type=desired_ptr_ty, operand=base_ptr)
 
-    return Load(ty=target_ty, dst=dest_var, src=base_expr, offset=offset, is_param=False)
+    return Load(
+        ty=target_ty, dst=dest_var, src=base_expr, offset=offset, is_param=False
+    )
 
 
 def emit_inline_asm(
@@ -251,7 +265,9 @@ def emit_inline_asm(
       selected output registers (if any).
     """
     if instr.predicate is not None:
-        raise ValueError("Predicated instructions are not yet lowered in emit_inline_asm")
+        raise ValueError(
+            "Predicated instructions are not yet lowered in emit_inline_asm"
+        )
 
     args: list[Expr] = []
     idx = 0
