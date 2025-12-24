@@ -45,6 +45,9 @@ def emit_inline_asm(
     - InlineAsm.arguments are the Vars in placeholder order; outputs are the Vars for the
       selected output registers (if any).
     """
+    if instr.predicate is not None:
+        raise ValueError("Predicated instructions are not yet lowered in emit_inline_asm")
+
     args: list[Expr] = []
     idx = 0
     rendered_ops: list[str] = []

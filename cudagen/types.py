@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
 from abc import ABC
+from enum import IntEnum
 import ptx
 
 
@@ -17,6 +18,14 @@ class Var(Expr):
     bitwidth: int
     is_float: bool
     represents_predicate: bool = False
+
+class BinaryOpcode(IntEnum):
+    pass
+
+
+@dataclass
+class BinaryOperator(Expr):
+    opcode : BinaryOpcode
 
 
 class KernelItem(ABC):
