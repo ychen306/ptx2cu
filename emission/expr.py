@@ -7,6 +7,7 @@ from cudagen.types import (
     BitCast,
     SignExt,
     ZeroExt,
+    Trunc,
     BinaryOpcode,
     BinaryOperator,
     CudaType,
@@ -123,6 +124,17 @@ def emit_expr(expr: Expr) -> str:
             assert not src_ty.is_float, "Sign/ZeroExt expects integer source types"
         ctype = _ctype_for_type(dst_ty)
         return f"({ctype})({src_expr_str})"
+    if isinstance(expr, Trunc):
+        src_ty = expr.operand.get_type()
+        dst_ty = expr.new_type
+        if src_ty is None:
+            raise ValueError("Trunc requires a source type")
+        assert not dst_ty.is_float, "Trunc expects integer destination types"
+        assert not src_ty.is_float, "Trunc expects integer source types"
+        assert dst_ty.bitwidth < src_ty.bitwidth, "Trunc must narrow the bitwidth"
+        assert dst_ty.is_signed == src_ty.is_signed, "Trunc preserves signedness"
+        ctype = _ctype_for_type(dst_ty)
+        return f"({ctype})({emit_expr(expr.operand)})"
     if isinstance(expr, ConstantInt):
         return str(expr.value)
     if isinstance(expr, BinaryOperator):

@@ -17,6 +17,7 @@ from .types import (
 from .render_branch import emit_branch
 from .render_inst import (
     emit_mov,
+    emit_mad_lo,
     emit_inline_asm,
     emit_assignment,
     emit_ld_global,
@@ -136,6 +137,10 @@ class CudaGen:
                 mov = emit_mov(node, self.reg_map)
                 if mov is not None:
                     items.append(mov)
+                    continue
+                mad_lo = emit_mad_lo(node, self.reg_map)
+                if mad_lo is not None:
+                    items.append(mad_lo)
                     continue
                 assignment = emit_assignment(node, self.reg_map)
                 if assignment is not None:

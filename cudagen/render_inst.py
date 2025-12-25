@@ -23,6 +23,7 @@ from .types import (
     Store,
     SignExt,
     ZeroExt,
+    Trunc,
 )
 from .datatype import type_info_for_datatype
 from .utils import collect_registers, render_operand_with_index
@@ -58,9 +59,42 @@ def _get_mnemonic(opcode: str) -> str:
     parts = opcode.split(".")
     if not parts:
         return opcode
+    if parts[0] == "mad" and len(parts) > 1 and parts[1] == "lo":
+        return "mad.lo"
     if parts[0] == "mul" and len(parts) > 1 and parts[1] in {"lo", "hi", "wide"}:
         return f"{parts[0]}.{parts[1]}"
     return parts[0]
+
+
+def _parse_int_suffix(opcode: str, prefix: str) -> Optional[tuple[bool, int]]:
+    """
+    Parse signedness and bitwidth for opcodes like mul.wide.s32 or mad.lo.u32.
+    Returns (signed, bitwidth) or None if not matched.
+    """
+    m = re.search(fr"{re.escape(prefix)}\.(s|u)(\d+)", opcode)
+    if not m:
+        return None
+    signed = m.group(1) == "s"
+    bitwidth = int(m.group(2))
+    return signed, bitwidth
+
+
+def _ensure_expr_type(expr: Expr, target: CudaType) -> Expr:
+    """
+    Ensure the expression has the requested type, inserting a BitCast if needed.
+    """
+    if expr.get_type() == target:
+        return expr
+    return BitCast(new_type=target, operand=expr)
+
+
+def _widen_operand(expr: Expr, input_ty: CudaType, wide_ty: CudaType, signed: bool) -> Expr:
+    """
+    Bitcast to input_ty if needed, then sign/zero extend to wide_ty.
+    """
+    narrowed = _ensure_expr_type(expr, input_ty)
+    ext_cls = SignExt if signed else ZeroExt
+    return ext_cls(operand=narrowed, new_type=wide_ty)
 
 
 def emit_mov(
@@ -106,6 +140,81 @@ def emit_mov(
         return None
 
     return Assignment(lhs=dest_var, rhs=rhs_expr)
+
+
+def emit_mad_lo(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Assignment]:
+    """
+    Lower mad.lo.{s,u}<bits> into widening multiply + trunc + add.
+    """
+    if instr.predicate is not None:
+        return None
+    mnemonic = _get_mnemonic(instr.opcode)
+    if mnemonic != "mad.lo":
+        return None
+    if len(instr.operands) < 4:
+        return None
+
+    parsed = _parse_int_suffix(instr.opcode, "mad.lo")
+    if parsed is None:
+        return None
+    signed, input_bw = parsed
+    input_ty = CudaType(
+        bitwidth=input_bw,
+        type_id=CudaTypeId.Signed if signed else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+    wide_ty = CudaType(
+        bitwidth=input_bw * 2,
+        type_id=CudaTypeId.Signed if signed else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+
+    dest_op, mul_a_op, mul_b_op, add_op = instr.operands[0:4]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    if not isinstance(mul_a_op, ptx.Register):
+        return None
+    if not isinstance(mul_b_op, ptx.Register):
+        return None
+    if not isinstance(add_op, (ptx.Register, ptx.Immediate)):
+        return None
+
+    dest_var = regmap.get(dest_op)
+    mul_a_var = regmap.get(mul_a_op)
+    mul_b_var = regmap.get(mul_b_op)
+    add_var = regmap.get(add_op) if isinstance(add_op, ptx.Register) else None
+    if dest_var is None or mul_a_var is None or mul_b_var is None:
+        return None
+    if isinstance(add_op, ptx.Register) and add_var is None:
+        return None
+
+    mul_a_expr = _widen_operand(mul_a_var, input_ty, wide_ty, signed)
+    mul_b_expr = _widen_operand(mul_b_var, input_ty, wide_ty, signed)
+    prod = BinaryOperator(opcode=BinaryOpcode.Mul, operand_a=mul_a_expr, operand_b=mul_b_expr)
+    low = Trunc(operand=prod, new_type=input_ty)
+
+    if isinstance(add_op, ptx.Register):
+        add_expr = _ensure_expr_type(add_var, input_ty)
+    else:
+        try:
+            imm_val = int(add_op.value, 0)
+        except ValueError:
+            return None
+        add_expr = ConstantInt(value=imm_val, ty=input_ty)
+
+    rhs: Expr = BinaryOperator(
+        opcode=BinaryOpcode.Add,
+        operand_a=low,
+        operand_b=add_expr,
+    )
+
+    dest_ty = dest_var.get_type()
+    if dest_ty is not None and dest_ty != input_ty:
+        rhs = BitCast(new_type=dest_ty, operand=rhs)
+
+    return Assignment(lhs=dest_var, rhs=rhs)
 
 
 def emit_assignment(
@@ -183,11 +292,10 @@ def emit_binary_expr(
     opcode_bw = _opcode_bitwidth(instr.opcode) or ty0.bitwidth
     mnemonic = _get_mnemonic(instr.opcode)
     if mnemonic == "mul.wide":
-        match = re.search(r"mul\.wide\.(s|u)(\d+)", instr.opcode)
-        if match is None:
+        parsed = _parse_int_suffix(instr.opcode, "mul.wide")
+        if parsed is None:
             return None
-        signed = match.group(1) == "s"
-        input_bw = int(match.group(2))
+        signed, input_bw = parsed
         target_bw = input_bw * 2
         input_ty = CudaType(
             bitwidth=input_bw,
@@ -200,16 +308,12 @@ def emit_binary_expr(
             represents_predicate=False,
         )
 
-        src0_expr: Expr = src0 if src0.get_type() == input_ty else BitCast(input_ty, src0)
+        src0_expr: Expr = _ensure_expr_type(src0, input_ty)
         if isinstance(src1_op, ptx.Register):
             src1_var = regmap.get(src1_op)
             if src1_var is None:
                 return None
-            src1_expr: Expr = (
-                src1_var
-                if src1_var.get_type() == input_ty
-                else BitCast(input_ty, src1_var)
-            )
+            src1_expr: Expr = _ensure_expr_type(src1_var, input_ty)
         else:
             try:
                 imm_val = int(src1_op.value, 0)
@@ -217,13 +321,12 @@ def emit_binary_expr(
                 return None
             src1_expr = ConstantInt(value=imm_val, ty=target_ty)
 
-        ext_cls = SignExt if signed else ZeroExt
-        op_a = ext_cls(operand=src0_expr, new_type=target_ty)
-        op_b: Expr
-        if isinstance(src1_expr, ConstantInt):
-            op_b = src1_expr
-        else:
-            op_b = ext_cls(operand=src1_expr, new_type=target_ty)
+        op_a = _widen_operand(src0_expr, input_ty, target_ty, signed)
+        op_b: Expr = (
+            src1_expr
+            if isinstance(src1_expr, ConstantInt)
+            else _widen_operand(src1_expr, input_ty, target_ty, signed)
+        )
 
         return BinaryOperator(
             opcode=BinaryOpcode.Mul,

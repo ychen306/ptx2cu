@@ -7,6 +7,7 @@ from cudagen.types import (
     BitCast,
     SignExt,
     ZeroExt,
+    Trunc,
     CudaType,
     CudaTypeId,
     Var,
@@ -78,3 +79,19 @@ def test_emit_expr_signext():
     dst_ty = CudaType(32, CudaTypeId.Signed)
     expr = SignExt(operand=Var("x", src_ty), new_type=dst_ty)
     assert emit_expr(expr) == "(int)(x)"
+
+
+def test_emit_trunc_signed():
+    expr = Trunc(
+        operand=Var("r1", CudaType(64, CudaTypeId.Signed)),
+        new_type=CudaType(32, CudaTypeId.Signed),
+    )
+    assert emit_expr(expr) == "(int)(r1)"
+
+
+def test_emit_trunc_unsigned():
+    expr = Trunc(
+        operand=Var("r1", CudaType(64, CudaTypeId.Unsigned)),
+        new_type=CudaType(16, CudaTypeId.Unsigned),
+    )
+    assert emit_expr(expr) == "(unsigned short)(r1)"

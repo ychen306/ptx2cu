@@ -149,6 +149,15 @@ class ZeroExt(Expr):
         return self.new_type
 
 
+@dataclass
+class Trunc(Expr):
+    operand: Expr
+    new_type: CudaType
+
+    def get_type(self) -> Optional[CudaType]:
+        return self.new_type
+
+
 class KernelItem(ABC):
     pass
 

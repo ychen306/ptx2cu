@@ -1,5 +1,5 @@
 import ptx
-from cudagen.render_inst import emit_assignment
+from cudagen.render_inst import emit_assignment, emit_mov, emit_mad_lo
 from cudagen.types import (
     CudaType,
     Var,
@@ -10,12 +10,12 @@ from cudagen.types import (
     Store,
 )
 from emission.expr import emit_assignment_stmt
-from cudagen.render_inst import emit_mov
 from emission.param import emit_load
 from emission.memory import emit_store
 
 
 t_i32 = CudaType(32, CudaTypeId.Unsigned)
+t_s32 = CudaType(32, CudaTypeId.Signed)
 t_f32 = CudaType(32, CudaTypeId.Float)
 t_u64 = CudaType(64, CudaTypeId.Unsigned)
 
@@ -137,6 +137,31 @@ def test_emit_mov_assignment_end_to_end():
     assignment = emit_mov(instr, regmap)
     assert assignment is not None
     assert emit_assignment_stmt(assignment) == "r1 = __float_as_uint(r2);"
+
+
+def test_emit_mad_lo_s32_end_to_end():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t_s32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t_s32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t_s32),
+        ptx.Register(prefix="r", idx=4): Var("r4", t_s32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mad.lo.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+            ptx.Register(prefix="r", idx=4),
+        ],
+    )
+    assignment = emit_mad_lo(instr, regmap)
+    assert assignment is not None
+    assert (
+        emit_assignment_stmt(assignment)
+        == "r1 = ((int)(((long long)(r2) * (long long)(r3))) + r4);"
+    )
 
 
 def test_emit_assignment_from_mul_wide_u32():

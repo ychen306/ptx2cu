@@ -14,11 +14,19 @@ from cudagen.types import (
     Load,
     SignExt,
     ZeroExt,
+    Trunc,
 )
-from cudagen.render_inst import emit_ld_global, emit_st_global, emit_assignment, emit_mov
+from cudagen.render_inst import (
+    emit_ld_global,
+    emit_st_global,
+    emit_assignment,
+    emit_mov,
+    emit_mad_lo,
+)
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, CudaTypeId.Unsigned)
+t32s = CudaType(32, CudaTypeId.Signed)
 t64 = CudaType(64, CudaTypeId.Unsigned)
 t64s = CudaType(64, CudaTypeId.Signed)
 tpred = CudaType(32, CudaTypeId.Unsigned, True)
@@ -293,6 +301,55 @@ def test_emit_mov_immediate():
     assert isinstance(assignment, Assignment)
     assert isinstance(assignment.rhs, ConstantInt)
     assert assignment.rhs.value == 42
+
+
+def test_emit_mad_lo_s32():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32s),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32s),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32s),
+        ptx.Register(prefix="r", idx=4): Var("r4", t32s),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mad.lo.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+            ptx.Register(prefix="r", idx=4),
+        ],
+    )
+    assignment = emit_mad_lo(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    rhs = assignment.rhs
+    assert isinstance(rhs, BinaryOperator)
+    assert rhs.opcode == BinaryOpcode.Add
+    assert isinstance(rhs.operand_a, Trunc)
+    assert isinstance(rhs.operand_b, Var)
+
+
+def test_emit_mad_lo_u32_with_immediate():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mad.lo.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+            ptx.Immediate("5"),
+        ],
+    )
+    assignment = emit_mad_lo(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    rhs = assignment.rhs
+    assert isinstance(rhs, BinaryOperator)
+    assert isinstance(rhs.operand_b, ConstantInt)
 
 
 def test_emit_ld_global_basic():

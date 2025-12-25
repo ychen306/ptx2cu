@@ -12,7 +12,7 @@ extern "C" __global__ void _Z5saxpyifPKfPf(unsigned int _Z5saxpyifPKfPf_param_0,
   r3 = blockIdx.x;
   r4 = blockDim.x;
   r5 = threadIdx.x;
-  asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r1) : "r"(r3), "r"(r4), "r"(r5) : );
+  r1 = (unsigned int)(((int)(((long long)((int)(r3)) * (long long)((int)(r4)))) + (int)(r5)));
   asm volatile("{ .reg .pred %ptmp0; setp.ne.u32 %ptmp0, %0, 0; setp.ge.s32 %ptmp0, %1, %2; selp.u32 %0, 1, 0, %ptmp0; }" : "+r"(p1) : "r"(r1), "r"(r2) : );
   if (p1 != 0) goto L__BB0_2;
   asm volatile("cvta.to.global.u64 %0, %1;" : "+l"(rd3) : "l"(rd2) : );

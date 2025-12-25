@@ -72,12 +72,12 @@ extern "C" __global__ void _Z11gemm_deviceIN4cute5tupleIJiiiEEENS1_IJNS0_1CILi12
   r1 = (r183 >> 6);
   r184 = blockIdx.y;
   r185 = blockIdx.x;
-  asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r186) : "r"(r2), "r"(r184), "r"(r185) : );
+  r186 = (unsigned int)(((int)(((long long)((int)(r2)) * (long long)((int)(r184)))) + (int)(r185)));
   r187 = threadIdx.x;
   r188 = (r187 >> 4);
   r189 = (r187 << 3);
   r190 = (r189 & 120);
-  asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r191) : "r"(r3), "r"(r188), "r"(r190) : );
+  r191 = (unsigned int)(((int)(((long long)((int)(r3)) * (long long)((int)(r188)))) + (int)(r190)));
   r192 = (r189 & 56);
   r193 = (r187 << 2);
   r194 = (r193 & 448);
@@ -87,7 +87,7 @@ extern "C" __global__ void _Z11gemm_deviceIN4cute5tupleIJiiiEEENS1_IJNS0_1CILi12
   r198 = (r194 >> 3);
   r199 = (r195 ^ r198);
   r4 = (r197 | r199);
-  asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r200) : "r"(r5), "r"(r188), "r"(r190) : );
+  r200 = (unsigned int)(((int)(((long long)((int)(r5)) * (long long)((int)(r188)))) + (int)(r190)));
   r201 = (r187 & 96);
   r202 = (r187 >> 2);
   r203 = (r187 << 1);
@@ -95,7 +95,7 @@ extern "C" __global__ void _Z11gemm_deviceIN4cute5tupleIJiiiEEENS1_IJNS0_1CILi12
   r205 = (r201 >> 1);
   r206 = (r202 & 7);
   r207 = (r206 | r205);
-  asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r208) : "r"(r204), "r"(r2), "r"(r207) : );
+  r208 = (unsigned int)(((int)(((long long)((int)(r204)) * (long long)((int)(r2)))) + (int)(r207)));
   asm volatile("cvt.u64.u32 %0, %1;" : "+l"(rd44) : "r"(r208) : );
   asm volatile("cvt.u64.u32 %0, %1;" : "+l"(rd45) : "r"(r200) : );
   asm volatile("cvt.u64.u32 %0, %1;" : "+l"(rd46) : "r"(r191) : );
