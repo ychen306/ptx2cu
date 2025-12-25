@@ -115,7 +115,9 @@ def emit_expr(expr: Expr) -> str:
         # source type does not have the correct signedness (or is float), bitcast it first.
         assert not dst_ty.is_float, "Sign/ZeroExt expects integer destination types"
         assert dst_ty.bitwidth > src_ty.bitwidth, "Extension must widen the bitwidth"
-        required_sign = CudaTypeId.Signed if isinstance(expr, SignExt) else CudaTypeId.Unsigned
+        required_sign = (
+            CudaTypeId.Signed if isinstance(expr, SignExt) else CudaTypeId.Unsigned
+        )
         src_expr_str = emit_expr(expr.operand)
         if src_ty.is_float or src_ty.type_id != required_sign:
             cast_src_ty = CudaType(bitwidth=src_ty.bitwidth, type_id=required_sign)

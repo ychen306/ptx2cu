@@ -71,7 +71,7 @@ def _parse_int_suffix(opcode: str, prefix: str) -> Optional[tuple[bool, int]]:
     Parse signedness and bitwidth for opcodes like mul.wide.s32 or mad.lo.u32.
     Returns (signed, bitwidth) or None if not matched.
     """
-    m = re.search(fr"{re.escape(prefix)}\.(s|u)(\d+)", opcode)
+    m = re.search(rf"{re.escape(prefix)}\.(s|u)(\d+)", opcode)
     if not m:
         return None
     signed = m.group(1) == "s"
@@ -88,7 +88,9 @@ def _ensure_expr_type(expr: Expr, target: CudaType) -> Expr:
     return BitCast(new_type=target, operand=expr)
 
 
-def _widen_operand(expr: Expr, input_ty: CudaType, wide_ty: CudaType, signed: bool) -> Expr:
+def _widen_operand(
+    expr: Expr, input_ty: CudaType, wide_ty: CudaType, signed: bool
+) -> Expr:
     """
     Bitcast to input_ty if needed, then sign/zero extend to wide_ty.
     """
@@ -192,10 +194,13 @@ def emit_mad_lo(
 
     mul_a_expr = _widen_operand(mul_a_var, input_ty, wide_ty, signed)
     mul_b_expr = _widen_operand(mul_b_var, input_ty, wide_ty, signed)
-    prod = BinaryOperator(opcode=BinaryOpcode.Mul, operand_a=mul_a_expr, operand_b=mul_b_expr)
+    prod = BinaryOperator(
+        opcode=BinaryOpcode.Mul, operand_a=mul_a_expr, operand_b=mul_b_expr
+    )
     low = Trunc(operand=prod, new_type=input_ty)
 
     if isinstance(add_op, ptx.Register):
+        assert add_var is not None
         add_expr = _ensure_expr_type(add_var, input_ty)
     else:
         try:
@@ -376,19 +381,22 @@ def emit_binary_expr(
     if target_ty.bitwidth == 16 and target_ty.type_id == CudaTypeId.Float:
         if isinstance(src1_op, ptx.Register):
             src1_var = regmap.get(src1_op)
-            if src1_var is None or (
-                src1_var.get_type() is not None
-                and src1_var.get_type().bitwidth == 16
-                and src1_var.get_type().type_id != CudaTypeId.Float
+            if src1_var is None:
+                return None
+            src1_ty = src1_var.get_type()
+            if (
+                src1_ty is not None
+                and src1_ty.bitwidth == 16
+                and src1_ty.type_id != CudaTypeId.Float
             ):
                 return None
 
-    op_a: Expr = src0 if src0.get_type() == target_ty else BitCast(target_ty, src0)
+    op_a_expr: Expr = src0 if src0.get_type() == target_ty else BitCast(target_ty, src0)
     if isinstance(src1_op, ptx.Register):
         src1_var = regmap.get(src1_op)
         if src1_var is None:
             return None
-        op_b: Expr = (
+        op_b_expr: Expr = (
             src1_var
             if src1_var.get_type() == target_ty
             else BitCast(target_ty, src1_var)
@@ -399,9 +407,9 @@ def emit_binary_expr(
             imm_val = int(src1_op.value, 0)
         except ValueError:
             return None
-        op_b = ConstantInt(value=imm_val, ty=target_ty)
+        op_b_expr = ConstantInt(value=imm_val, ty=target_ty)
 
-    return BinaryOperator(opcode=op, operand_a=op_a, operand_b=op_b)
+    return BinaryOperator(opcode=op, operand_a=op_a_expr, operand_b=op_b_expr)
 
 
 def emit_ld_global(
@@ -506,6 +514,7 @@ def emit_st_global(
         base_expr = BitCast(new_type=desired_ptr_ty, operand=base_ptr)
 
     # Value expression
+    value_expr: Expr
     if isinstance(value_op, ptx.Register):
         val_var = regmap.get(value_op)
         if val_var is None:
@@ -522,12 +531,14 @@ def emit_st_global(
             value_expr = BitCast(target_ty, val_var)
         else:
             value_expr = val_var
-    else:
+    elif isinstance(value_op, ptx.Immediate):
         try:
             imm_val = int(value_op.value, 0)
         except ValueError:
             return None
         value_expr = ConstantInt(value=imm_val, ty=target_ty)
+    else:
+        return None
 
     return Store(pointer=base_expr, offset=offset, value=value_expr)
 

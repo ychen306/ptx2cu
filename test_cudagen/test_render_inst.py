@@ -428,7 +428,8 @@ def test_emit_st_global_basic():
     )
     regmap = {
         ptx.Register(prefix="rd", idx=1): Var(
-            "ptr", CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned))
+            "ptr",
+            CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)),
         ),
         ptx.Register(prefix="r", idx=2): Var(
             "val", CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)
@@ -450,7 +451,8 @@ def test_emit_st_global_bitcasts():
     )
     regmap = {
         ptx.Register(prefix="rd", idx=1): Var(
-            "ptr", CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned))
+            "ptr",
+            CudaPointerType(elem=CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)),
         ),
         ptx.Register(prefix="r", idx=2): Var(
             "val", CudaType(bitwidth=32, type_id=CudaTypeId.Unsigned)

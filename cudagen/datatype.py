@@ -55,5 +55,9 @@ def type_info_for_datatype(datatype: str) -> tuple[str, int, bool]:
     ctype = ctype_for_datatype(datatype)
     size = sizeof_datatype(datatype)
     bitwidth = size * 8
-    is_float = datatype.startswith("f") or datatype.startswith("b16") or datatype.startswith("u16")
+    is_float = (
+        datatype.startswith("f")
+        or datatype.startswith("b16")
+        or datatype.startswith("u16")
+    )
     return ctype, bitwidth, is_float
