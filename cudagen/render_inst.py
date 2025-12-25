@@ -21,6 +21,8 @@ from .types import (
     CudaPointerType,
     Load,
     Store,
+    SignExt,
+    ZeroExt,
 )
 from .datatype import type_info_for_datatype
 from .utils import collect_registers, render_operand_with_index
@@ -134,6 +136,56 @@ def emit_binary_expr(
         return None
 
     opcode_bw = _opcode_bitwidth(instr.opcode) or ty0.bitwidth
+    mnemonic = _get_mnemonic(instr.opcode)
+    if mnemonic == "mul.wide":
+        match = re.search(r"mul\.wide\.(s|u)(\d+)", instr.opcode)
+        if match is None:
+            return None
+        signed = match.group(1) == "s"
+        input_bw = int(match.group(2))
+        target_bw = input_bw * 2
+        input_ty = CudaType(
+            bitwidth=input_bw,
+            type_id=CudaTypeId.Signed if signed else CudaTypeId.Unsigned,
+            represents_predicate=False,
+        )
+        target_ty = CudaType(
+            bitwidth=target_bw,
+            type_id=CudaTypeId.Signed if signed else CudaTypeId.Unsigned,
+            represents_predicate=False,
+        )
+
+        src0_expr: Expr = src0 if src0.get_type() == input_ty else BitCast(input_ty, src0)
+        if isinstance(src1_op, ptx.Register):
+            src1_var = regmap.get(src1_op)
+            if src1_var is None:
+                return None
+            src1_expr: Expr = (
+                src1_var
+                if src1_var.get_type() == input_ty
+                else BitCast(input_ty, src1_var)
+            )
+        else:
+            try:
+                imm_val = int(src1_op.value, 0)
+            except ValueError:
+                return None
+            src1_expr = ConstantInt(value=imm_val, ty=target_ty)
+
+        ext_cls = SignExt if signed else ZeroExt
+        op_a = ext_cls(operand=src0_expr, new_type=target_ty)
+        op_b: Expr
+        if isinstance(src1_expr, ConstantInt):
+            op_b = src1_expr
+        else:
+            op_b = ext_cls(operand=src1_expr, new_type=target_ty)
+
+        return BinaryOperator(
+            opcode=BinaryOpcode.Mul,
+            operand_a=op_a,
+            operand_b=op_b,
+        )
+
     # Decide float/int based purely on opcode suffix, not operand types.
     is_float_opcode = any(part.startswith("f") for part in instr.opcode.split("."))
     # Preserve operand signedness when not float; opcode signedness is secondary.
@@ -148,10 +200,6 @@ def emit_binary_expr(
         represents_predicate=False,
     )
     if target_ty.bitwidth == 16 and target_ty.type_id != CudaTypeId.Float:
-        return None
-
-    mnemonic = _get_mnemonic(instr.opcode)
-    if mnemonic == "mul.wide":
         return None
 
     opcode_map: dict[str, BinaryOpcode] = {

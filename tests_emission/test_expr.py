@@ -5,6 +5,8 @@ from cudagen.types import (
     BinaryOpcode,
     BinaryOperator,
     BitCast,
+    SignExt,
+    ZeroExt,
     CudaType,
     CudaTypeId,
     Var,
@@ -62,3 +64,17 @@ def test_emit_expr_bitcast_unsupported():
                 new_type=t_i32, operand=Var("h1", CudaType(16, CudaTypeId.Unsigned))
             )
         )
+
+
+def test_emit_expr_zeroext():
+    src_ty = CudaType(16, CudaTypeId.Unsigned)
+    dst_ty = CudaType(32, CudaTypeId.Unsigned)
+    expr = ZeroExt(operand=Var("x", src_ty), new_type=dst_ty)
+    assert emit_expr(expr) == "(unsigned int)(x)"
+
+
+def test_emit_expr_signext():
+    src_ty = CudaType(16, CudaTypeId.Signed)
+    dst_ty = CudaType(32, CudaTypeId.Signed)
+    expr = SignExt(operand=Var("x", src_ty), new_type=dst_ty)
+    assert emit_expr(expr) == "(int)(x)"

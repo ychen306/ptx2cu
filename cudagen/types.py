@@ -131,6 +131,24 @@ class BitCast(Expr):
         return self.new_type
 
 
+@dataclass
+class SignExt(Expr):
+    operand: Expr
+    new_type: CudaType
+
+    def get_type(self) -> Optional[CudaType]:
+        return self.new_type
+
+
+@dataclass
+class ZeroExt(Expr):
+    operand: Expr
+    new_type: CudaType
+
+    def get_type(self) -> Optional[CudaType]:
+        return self.new_type
+
+
 class KernelItem(ABC):
     pass
 

@@ -17,7 +17,7 @@ extern "C" __global__ void _Z5saxpyifPKfPf(unsigned int _Z5saxpyifPKfPf_param_0,
   if (p1 != 0) goto L__BB0_2;
   asm volatile("cvta.to.global.u64 %0, %1;" : "+l"(rd3) : "l"(rd2) : );
   asm volatile("cvta.to.global.u64 %0, %1;" : "+l"(rd4) : "l"(rd1) : );
-  asm volatile("mul.wide.s32 %0, %1, 4;" : "+l"(rd5) : "r"(r1) : );
+  rd5 = (unsigned long long)(((long long)((int)(r1)) * 4));
   rd6 = (rd4 + rd5);
   rd7 = (rd3 + rd5);
   f2 = reinterpret_cast<float*>(rd7)[0];

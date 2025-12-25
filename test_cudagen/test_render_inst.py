@@ -12,12 +12,15 @@ from cudagen.types import (
     BitCast,
     ConstantInt,
     Load,
+    SignExt,
+    ZeroExt,
 )
 from cudagen.render_inst import emit_ld_global, emit_st_global, emit_assignment
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, CudaTypeId.Unsigned)
 t64 = CudaType(64, CudaTypeId.Unsigned)
+t64s = CudaType(64, CudaTypeId.Signed)
 tpred = CudaType(32, CudaTypeId.Unsigned, True)
 
 
@@ -161,7 +164,7 @@ def test_emit_assignment_add():
 
 def test_emit_assignment_reject_mul_wide():
     regmap = {
-        ptx.Register(prefix="r", idx=1): Var("r1", t32),
+        ptx.Register(prefix="rd", idx=1): Var("rd1", t64s),
         ptx.Register(prefix="r", idx=2): Var("r2", t32),
         ptx.Register(prefix="r", idx=3): Var("r3", t32),
     }
@@ -169,12 +172,44 @@ def test_emit_assignment_reject_mul_wide():
         predicate=None,
         opcode="mul.wide.s32",
         operands=[
-            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="rd", idx=1),
             ptx.Register(prefix="r", idx=2),
             ptx.Register(prefix="r", idx=3),
         ],
     )
-    assert emit_assignment(instr, regmap) is None
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert assignment.lhs == Var("rd1", t64s)
+    rhs = assignment.rhs
+    assert isinstance(rhs, BinaryOperator)
+    assert rhs.opcode == BinaryOpcode.Mul
+    assert rhs.operand_a.get_type().bitwidth == 64
+    assert rhs.operand_a.get_type().type_id == CudaTypeId.Signed
+    assert rhs.operand_b.get_type().bitwidth == 64
+
+
+def test_emit_assignment_mul_wide_unsigned_with_immediate():
+    regmap = {
+        ptx.Register(prefix="rd", idx=1): Var("rd1", t64),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mul.wide.u32",
+        operands=[
+            ptx.Register(prefix="rd", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Immediate("4"),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    rhs = assignment.rhs
+    assert isinstance(rhs, BinaryOperator)
+    assert rhs.operand_a.get_type().bitwidth == 64
+    assert isinstance(rhs.operand_a, ZeroExt)
+    assert isinstance(rhs.operand_b, ConstantInt)
+    assert rhs.operand_b.ty.bitwidth == 64
 
 
 def test_emit_assignment_bitcasts_int_inputs_for_float_opcode():

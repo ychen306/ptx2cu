@@ -16,6 +16,7 @@ from emission.memory import emit_store
 
 t_i32 = CudaType(32, CudaTypeId.Unsigned)
 t_f32 = CudaType(32, CudaTypeId.Float)
+t_u64 = CudaType(64, CudaTypeId.Unsigned)
 
 
 def test_emit_assignment_from_add_s32():
@@ -117,3 +118,26 @@ def test_emit_assignment_from_add_f16():
     assignment = emit_assignment(instr, regmap)
     assert assignment is not None
     assert emit_assignment_stmt(assignment) == "rs1 = (rs2 + rs3);"
+
+
+def test_emit_assignment_from_mul_wide_u32():
+    regmap = {
+        ptx.Register(prefix="rd", idx=1): Var("rd1", t_u64),
+        ptx.Register(prefix="r", idx=2): Var("r2", t_i32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t_i32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mul.wide.u32",
+        operands=[
+            ptx.Register(prefix="rd", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assignment = emit_assignment(instr, regmap)
+    assert assignment is not None
+    assert (
+        emit_assignment_stmt(assignment)
+        == "rd1 = ((unsigned long long)(r2) * (unsigned long long)(r3));"
+    )
