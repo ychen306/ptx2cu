@@ -10,6 +10,7 @@ from cudagen.types import (
     Store,
 )
 from emission.expr import emit_assignment_stmt
+from cudagen.render_inst import emit_mov
 from emission.param import emit_load
 from emission.memory import emit_store
 
@@ -118,6 +119,24 @@ def test_emit_assignment_from_add_f16():
     assignment = emit_assignment(instr, regmap)
     assert assignment is not None
     assert emit_assignment_stmt(assignment) == "rs1 = (rs2 + rs3);"
+
+
+def test_emit_mov_assignment_end_to_end():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t_i32),
+        ptx.Register(prefix="r", idx=2): Var("r2", t_f32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    assignment = emit_mov(instr, regmap)
+    assert assignment is not None
+    assert emit_assignment_stmt(assignment) == "r1 = __float_as_uint(r2);"
 
 
 def test_emit_assignment_from_mul_wide_u32():

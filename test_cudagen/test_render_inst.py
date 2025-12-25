@@ -15,7 +15,7 @@ from cudagen.types import (
     SignExt,
     ZeroExt,
 )
-from cudagen.render_inst import emit_ld_global, emit_st_global, emit_assignment
+from cudagen.render_inst import emit_ld_global, emit_st_global, emit_assignment, emit_mov
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
 t32 = CudaType(32, CudaTypeId.Unsigned)
@@ -261,6 +261,38 @@ def test_emit_assignment_with_immediate_shift():
     assert rhs.opcode in (BinaryOpcode.AShr, BinaryOpcode.LShr)
     assert isinstance(rhs.operand_b, ConstantInt)
     assert rhs.operand_b.value == 6
+
+
+def test_emit_mov_registers_bitcast():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t64),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u64",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    assignment = emit_mov(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert assignment.lhs == Var("r1", t64)
+    assert isinstance(assignment.rhs, BitCast)
+
+
+def test_emit_mov_immediate():
+    regmap = {ptx.Register(prefix="r", idx=1): Var("r1", t32)}
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="mov.u32",
+        operands=[ptx.Register(prefix="r", idx=1), ptx.Immediate("42")],
+    )
+    assignment = emit_mov(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert isinstance(assignment.rhs, ConstantInt)
+    assert assignment.rhs.value == 42
 
 
 def test_emit_ld_global_basic():

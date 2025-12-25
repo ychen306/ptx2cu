@@ -9,9 +9,9 @@ extern "C" __global__ void _Z5saxpyifPKfPf(unsigned int _Z5saxpyifPKfPf_param_0,
   f1 = reinterpret_cast<float*>(&_Z5saxpyifPKfPf_param_1)[0];
   rd1 = reinterpret_cast<unsigned long long*>(&_Z5saxpyifPKfPf_param_2)[0];
   rd2 = reinterpret_cast<unsigned long long*>(&_Z5saxpyifPKfPf_param_3)[0];
-  asm volatile("mov.u32 %0, %1;" : "+r"(r3) : "r"(blockIdx.x) : );
-  asm volatile("mov.u32 %0, %1;" : "+r"(r4) : "r"(blockDim.x) : );
-  asm volatile("mov.u32 %0, %1;" : "+r"(r5) : "r"(threadIdx.x) : );
+  r3 = blockIdx.x;
+  r4 = blockDim.x;
+  r5 = threadIdx.x;
   asm volatile("mad.lo.s32 %0, %1, %2, %3;" : "+r"(r1) : "r"(r3), "r"(r4), "r"(r5) : );
   asm volatile("{ .reg .pred %ptmp0; setp.ne.u32 %ptmp0, %0, 0; setp.ge.s32 %ptmp0, %1, %2; selp.u32 %0, 1, 0, %ptmp0; }" : "+r"(p1) : "r"(r1), "r"(r2) : );
   if (p1 != 0) goto L__BB0_2;

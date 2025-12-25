@@ -63,6 +63,51 @@ def _get_mnemonic(opcode: str) -> str:
     return parts[0]
 
 
+def emit_mov(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Assignment]:
+    """
+    Lower a simple mov.* into an Assignment, bitcasting the RHS to the LHS type when needed.
+    Supports register destination and register/immediate source.
+    """
+    if instr.predicate is not None:
+        return None
+    if not instr.opcode.startswith("mov"):
+        return None
+    if len(instr.operands) < 2:
+        return None
+
+    dest_op, src_op = instr.operands[0], instr.operands[1]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    dest_var = regmap.get(dest_op)
+    if dest_var is None:
+        return None
+    dest_ty = dest_var.get_type()
+    if dest_ty is None:
+        return None
+
+    rhs_expr: Expr
+    if isinstance(src_op, ptx.Register):
+        src_var = regmap.get(src_op)
+        if src_var is None:
+            return None
+        if src_var.get_type() != dest_ty:
+            rhs_expr = BitCast(new_type=dest_ty, operand=src_var)
+        else:
+            rhs_expr = src_var
+    elif isinstance(src_op, ptx.Immediate):
+        try:
+            imm_val = int(src_op.value, 0)
+        except ValueError:
+            return None
+        rhs_expr = ConstantInt(value=imm_val, ty=dest_ty)
+    else:
+        return None
+
+    return Assignment(lhs=dest_var, rhs=rhs_expr)
+
+
 def emit_assignment(
     instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
 ) -> Optional[Assignment]:

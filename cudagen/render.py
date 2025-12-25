@@ -16,6 +16,7 @@ from .types import (
 )
 from .render_branch import emit_branch
 from .render_inst import (
+    emit_mov,
     emit_inline_asm,
     emit_assignment,
     emit_ld_global,
@@ -131,20 +132,24 @@ class CudaGen:
                     continue
                 if node.opcode.startswith("ld.param"):
                     items.append(emit_ld_param(node, self.reg_map, self.param_map))
-                else:
-                    assignment = emit_assignment(node, self.reg_map)
-                    if assignment is not None:
-                        items.append(assignment)
-                        continue
-                    ld_global = emit_ld_global(node, self.reg_map)
-                    if ld_global is not None:
-                        items.append(ld_global)
-                        continue
-                    st_global = emit_st_global(node, self.reg_map)
-                    if st_global is not None:
-                        items.append(st_global)
-                        continue
-                    items.append(emit_inline_asm(node, self.reg_map))
+                    continue
+                mov = emit_mov(node, self.reg_map)
+                if mov is not None:
+                    items.append(mov)
+                    continue
+                assignment = emit_assignment(node, self.reg_map)
+                if assignment is not None:
+                    items.append(assignment)
+                    continue
+                ld_global = emit_ld_global(node, self.reg_map)
+                if ld_global is not None:
+                    items.append(ld_global)
+                    continue
+                st_global = emit_st_global(node, self.reg_map)
+                if st_global is not None:
+                    items.append(st_global)
+                    continue
+                items.append(emit_inline_asm(node, self.reg_map))
             elif isinstance(node, ptx.ScopedBlock):
                 self._walk_block(node, items)
             # ignore other directive/opaque nodes for now
