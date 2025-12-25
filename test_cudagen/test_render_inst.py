@@ -15,6 +15,8 @@ from cudagen.types import (
     SignExt,
     ZeroExt,
     Trunc,
+    Compare,
+    CompareOpcode,
 )
 from cudagen.render_inst import (
     emit_ld_global,
@@ -22,6 +24,7 @@ from cudagen.render_inst import (
     emit_assignment,
     emit_mov,
     emit_mad_lo,
+    emit_predicate,
 )
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
@@ -350,6 +353,49 @@ def test_emit_mad_lo_u32_with_immediate():
     rhs = assignment.rhs
     assert isinstance(rhs, BinaryOperator)
     assert isinstance(rhs.operand_b, ConstantInt)
+
+
+def test_emit_predicate_setp_s32():
+    regmap = {
+        ptx.Register(prefix="p", idx=1): Var("p1", tpred),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32s),
+        ptx.Register(prefix="r", idx=3): Var("r3", t32s),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="setp.lt.s32",
+        operands=[
+            ptx.Register(prefix="p", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assignment = emit_predicate(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    cmp = assignment.rhs
+    assert isinstance(cmp, Compare)
+    assert cmp.opcode == CompareOpcode.ICmpSLT
+
+
+def test_emit_predicate_setp_u32_immediate():
+    regmap = {
+        ptx.Register(prefix="p", idx=1): Var("p1", tpred),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="setp.ge.u32",
+        operands=[
+            ptx.Register(prefix="p", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Immediate("0"),
+        ],
+    )
+    assignment = emit_predicate(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    cmp = assignment.rhs
+    assert isinstance(cmp, Compare)
+    assert cmp.opcode == CompareOpcode.ICmpUGE
 
 
 def test_emit_ld_global_basic():

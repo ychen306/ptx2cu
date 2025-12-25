@@ -8,6 +8,8 @@ from cudagen.types import (
     SignExt,
     ZeroExt,
     Trunc,
+    Compare,
+    CompareOpcode,
     BinaryOpcode,
     BinaryOperator,
     CudaType,
@@ -137,6 +139,46 @@ def emit_expr(expr: Expr) -> str:
         assert dst_ty.is_signed == src_ty.is_signed, "Trunc preserves signedness"
         ctype = _ctype_for_type(dst_ty)
         return f"({ctype})({emit_expr(expr.operand)})"
+    if isinstance(expr, Compare):
+        lhs_ty = expr.operand_a.get_type()
+        rhs_ty = expr.operand_b.get_type()
+        assert (
+            lhs_ty == rhs_ty and lhs_ty is not None
+        ), "Compare operands must have matching types"
+        assert not lhs_ty.is_float, "Compare only supports integer operands"
+
+        match expr.opcode:
+            case CompareOpcode.ICmpEQ:
+                op_symbol = "=="
+            case CompareOpcode.ICmpNE:
+                op_symbol = "!="
+            case CompareOpcode.ICmpSLT | CompareOpcode.ICmpULT:
+                op_symbol = "<"
+            case CompareOpcode.ICmpSLE | CompareOpcode.ICmpULE:
+                op_symbol = "<="
+            case CompareOpcode.ICmpSGT | CompareOpcode.ICmpUGT:
+                op_symbol = ">"
+            case CompareOpcode.ICmpSGE | CompareOpcode.ICmpUGE:
+                op_symbol = ">="
+            case _:
+                raise ValueError(f"Unsupported compare opcode: {expr.opcode}")
+
+        if expr.opcode in {
+            CompareOpcode.ICmpSLT,
+            CompareOpcode.ICmpSLE,
+            CompareOpcode.ICmpSGT,
+            CompareOpcode.ICmpSGE,
+        }:
+            assert lhs_ty.is_signed, "Signed compare requires signed operands"
+        if expr.opcode in {
+            CompareOpcode.ICmpULT,
+            CompareOpcode.ICmpULE,
+            CompareOpcode.ICmpUGT,
+            CompareOpcode.ICmpUGE,
+        }:
+            assert not lhs_ty.is_signed, "Unsigned compare requires unsigned operands"
+
+        return f"({emit_expr(expr.operand_a)} {op_symbol} {emit_expr(expr.operand_b)})"
     if isinstance(expr, ConstantInt):
         return str(expr.value)
     if isinstance(expr, BinaryOperator):

@@ -24,6 +24,8 @@ from .types import (
     SignExt,
     ZeroExt,
     Trunc,
+    Compare,
+    CompareOpcode,
 )
 from .datatype import type_info_for_datatype
 from .utils import collect_registers, render_operand_with_index
@@ -220,6 +222,109 @@ def emit_mad_lo(
         rhs = BitCast(new_type=dest_ty, operand=rhs)
 
     return Assignment(lhs=dest_var, rhs=rhs)
+
+
+def emit_predicate(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Assignment]:
+    """
+    Lower setp.* predicate instructions into a Compare assignment.
+    Supports integer signed/unsigned comparisons; floats are not lowered.
+    """
+    if instr.predicate is not None:
+        return None
+    if not instr.opcode.startswith("setp."):
+        return None
+    if len(instr.operands) < 3:
+        return None
+
+    dest_op, lhs_op, rhs_op = instr.operands[0:3]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    if not isinstance(lhs_op, ptx.Register):
+        return None
+    if not isinstance(rhs_op, (ptx.Register, ptx.Immediate)):
+        return None
+
+    dest_var = regmap.get(dest_op)
+    lhs_var = regmap.get(lhs_op)
+    rhs_var = regmap.get(rhs_op) if isinstance(rhs_op, ptx.Register) else None
+    if (
+        dest_var is None
+        or lhs_var is None
+        or (isinstance(rhs_op, ptx.Register) and rhs_var is None)
+    ):
+        return None
+
+    # Parse compare operator and type suffix
+    parts = instr.opcode.split(".")
+    if len(parts) < 3:
+        return None
+    cmp_token = parts[1]
+    type_token = parts[2]
+
+    # Determine comparison opcode (llvm-style)
+    cmp_opcode_map_signed = {
+        "lt": CompareOpcode.ICmpSLT,
+        "le": CompareOpcode.ICmpSLE,
+        "gt": CompareOpcode.ICmpSGT,
+        "ge": CompareOpcode.ICmpSGE,
+    }
+    cmp_opcode_map_unsigned = {
+        "lt": CompareOpcode.ICmpULT,
+        "le": CompareOpcode.ICmpULE,
+        "gt": CompareOpcode.ICmpUGT,
+        "ge": CompareOpcode.ICmpUGE,
+    }
+
+    if cmp_token == "eq":
+        cmp_opcode = CompareOpcode.ICmpEQ
+    elif cmp_token == "ne" or cmp_token == "neu":
+        cmp_opcode = CompareOpcode.ICmpNE
+    elif cmp_token in cmp_opcode_map_signed:
+        signedness = (
+            "s"
+            if type_token.startswith("s")
+            else ("u" if type_token.startswith("u") else "u")
+        )
+        cmp_opcode = (
+            cmp_opcode_map_signed[cmp_token]
+            if signedness == "s"
+            else cmp_opcode_map_unsigned[cmp_token]
+        )
+    else:
+        return None
+
+    # Determine operand type from suffix (integer only)
+    m = re.search(r"(s|u|b)(\d+)", type_token)
+    if not m:
+        return None
+    bits = int(m.group(2))
+    is_signed = m.group(1) == "s"
+    cmp_ty = CudaType(
+        bitwidth=bits,
+        type_id=CudaTypeId.Signed if is_signed else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+
+    lhs_expr: Expr = _ensure_expr_type(lhs_var, cmp_ty)
+    if isinstance(rhs_op, ptx.Register):
+        rhs_expr: Expr = _ensure_expr_type(rhs_var, cmp_ty)  # type: ignore[arg-type]
+    else:
+        try:
+            imm_val = int(rhs_op.value, 0)
+        except ValueError:
+            return None
+        rhs_expr = ConstantInt(value=imm_val, ty=cmp_ty)
+
+    cmp_expr = Compare(opcode=cmp_opcode, operand_a=lhs_expr, operand_b=rhs_expr)
+    cmp_ty_result = cmp_expr.get_type()
+    dest_ty = dest_var.get_type()
+    rhs_final: Expr = cmp_expr
+    if dest_ty is not None and cmp_ty_result is not None and dest_ty != cmp_ty_result:
+        rhs_final = BitCast(new_type=dest_ty, operand=cmp_expr)
+
+    return Assignment(lhs=dest_var, rhs=rhs_final)
 
 
 def emit_assignment(

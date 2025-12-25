@@ -102,6 +102,19 @@ class BinaryOpcode(Enum):
     Xor = auto()
 
 
+class CompareOpcode(Enum):
+    ICmpEQ = auto()
+    ICmpNE = auto()
+    ICmpSLT = auto()
+    ICmpSLE = auto()
+    ICmpSGT = auto()
+    ICmpSGE = auto()
+    ICmpULT = auto()
+    ICmpULE = auto()
+    ICmpUGT = auto()
+    ICmpUGE = auto()
+
+
 @dataclass
 class BinaryOperator(Expr):
     opcode: BinaryOpcode
@@ -111,6 +124,19 @@ class BinaryOperator(Expr):
     def get_type(self):
         assert self.operand_a.get_type() == self.operand_b.get_type()
         return self.operand_a.get_type()
+
+
+@dataclass
+class Compare(Expr):
+    opcode: CompareOpcode
+    operand_a: Expr
+    operand_b: Expr
+
+    def get_type(self) -> Optional[CudaType]:
+        # Predicate result: 32-bit unsigned with predicate flag.
+        return CudaType(
+            bitwidth=32, type_id=CudaTypeId.Unsigned, represents_predicate=True
+        )
 
 
 @dataclass

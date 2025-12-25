@@ -8,6 +8,8 @@ from cudagen.types import (
     SignExt,
     ZeroExt,
     Trunc,
+    Compare,
+    CompareOpcode,
     CudaType,
     CudaTypeId,
     Var,
@@ -95,3 +97,23 @@ def test_emit_trunc_unsigned():
         new_type=CudaType(16, CudaTypeId.Unsigned),
     )
     assert emit_expr(expr) == "(unsigned short)(r1)"
+
+
+def test_emit_compare_signed():
+    ty = CudaType(32, CudaTypeId.Signed)
+    expr = Compare(
+        opcode=CompareOpcode.ICmpSLT,
+        operand_a=Var("a", ty),
+        operand_b=Var("b", ty),
+    )
+    assert emit_expr(expr) == "(a < b)"
+
+
+def test_emit_compare_unsigned():
+    ty = CudaType(32, CudaTypeId.Unsigned)
+    expr = Compare(
+        opcode=CompareOpcode.ICmpULE,
+        operand_a=Var("a", ty),
+        operand_b=Var("b", ty),
+    )
+    assert emit_expr(expr) == "(a <= b)"

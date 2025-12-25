@@ -1,5 +1,5 @@
 import ptx
-from cudagen.render_inst import emit_assignment, emit_mov, emit_mad_lo
+from cudagen.render_inst import emit_assignment, emit_mov, emit_mad_lo, emit_predicate
 from cudagen.types import (
     CudaType,
     Var,
@@ -162,6 +162,30 @@ def test_emit_mad_lo_s32_end_to_end():
         emit_assignment_stmt(assignment)
         == "r1 = ((int)(((long long)(r2) * (long long)(r3))) + r4);"
     )
+
+
+def test_emit_predicate_end_to_end():
+    t_s32 = CudaType(32, CudaTypeId.Signed)
+    regmap = {
+        ptx.Register(prefix="p", idx=1): Var(
+            "p1", CudaType(32, CudaTypeId.Unsigned, True)
+        ),
+        ptx.Register(prefix="r", idx=2): Var("r2", t_s32),
+        ptx.Register(prefix="r", idx=3): Var("r3", t_s32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="setp.ge.s32",
+        operands=[
+            ptx.Register(prefix="p", idx=1),
+            ptx.Register(prefix="r", idx=2),
+            ptx.Register(prefix="r", idx=3),
+        ],
+    )
+    assignment = emit_predicate(instr, regmap)
+    assert assignment is not None
+    # Should produce a signed compare
+    assert emit_assignment_stmt(assignment) == "p1 = (r2 >= r3);"
 
 
 def test_emit_assignment_from_mul_wide_u32():
