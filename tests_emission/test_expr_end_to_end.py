@@ -1,5 +1,5 @@
 import ptx
-from cudagen.render_inst import emit_assignment, emit_mov, emit_mad_lo, emit_predicate
+from cudagen.render_inst import emit_assignment, emit_mov, emit_mad_lo, emit_predicate, emit_cvt
 from cudagen.types import (
     CudaType,
     Var,
@@ -186,6 +186,26 @@ def test_emit_predicate_end_to_end():
     assert assignment is not None
     # Should produce a signed compare
     assert emit_assignment_stmt(assignment) == "p1 = (r2 >= r3);"
+
+
+def test_emit_cvt_end_to_end():
+    t_u32 = CudaType(32, CudaTypeId.Unsigned)
+    t_u64 = CudaType(64, CudaTypeId.Unsigned)
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t_u64),
+        ptx.Register(prefix="r", idx=2): Var("r2", t_u32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="cvt.u64.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    assignment = emit_cvt(instr, regmap)
+    assert assignment is not None
+    assert emit_assignment_stmt(assignment) == "r1 = (unsigned long long)(r2);"
 
 
 def test_emit_assignment_from_mul_wide_u32():

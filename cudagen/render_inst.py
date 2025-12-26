@@ -327,6 +327,91 @@ def emit_predicate(
     return Assignment(lhs=dest_var, rhs=rhs_final)
 
 
+def emit_cvt(
+    instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
+) -> Optional[Assignment]:
+    """
+    Lower integer cvt.<dst>.<src> instructions into SignExt/ZeroExt/Trunc/BitCast as needed.
+    """
+    if instr.predicate is not None:
+        return None
+    if not instr.opcode.startswith("cvt."):
+        return None
+    if len(instr.operands) < 2:
+        return None
+
+    parts = instr.opcode.split(".")
+    if len(parts) < 3:
+        return None
+    dst_tok, src_tok = parts[1], parts[2]
+
+    def _parse_int_tok(tok: str) -> Optional[tuple[bool, int]]:
+        m = re.match(r"(s|u|b)(\d+)", tok)
+        if not m:
+            return None
+        return (m.group(1) == "s", int(m.group(2)))
+
+    dst_parsed = _parse_int_tok(dst_tok)
+    src_parsed = _parse_int_tok(src_tok)
+    if dst_parsed is None or src_parsed is None:
+        return None
+
+    dst_signed, dst_bw = dst_parsed
+    src_signed, src_bw = src_parsed
+
+    dest_op, src_op = instr.operands[0], instr.operands[1]
+    if not isinstance(dest_op, ptx.Register):
+        return None
+    dest_var = regmap.get(dest_op)
+    if dest_var is None:
+        return None
+
+    dst_ty = CudaType(
+        bitwidth=dst_bw,
+        type_id=CudaTypeId.Signed if dst_signed else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+    src_ty = CudaType(
+        bitwidth=src_bw,
+        type_id=CudaTypeId.Signed if src_signed else CudaTypeId.Unsigned,
+        represents_predicate=False,
+    )
+
+    # Build source expression
+    if isinstance(src_op, ptx.Register):
+        src_var = regmap.get(src_op)
+        if src_var is None:
+            return None
+        src_expr: Expr = _ensure_expr_type(src_var, src_ty)
+    elif isinstance(src_op, ptx.Immediate):
+        try:
+            imm_val = int(src_op.value, 0)
+        except ValueError:
+            return None
+        src_expr = ConstantInt(value=imm_val, ty=src_ty)
+    else:
+        return None
+
+    rhs: Expr
+    if dst_bw > src_bw:
+        ext_cls = SignExt if dst_signed else ZeroExt
+        rhs = ext_cls(operand=src_expr, new_type=dst_ty)
+    elif dst_bw == src_bw:
+        # Only need to adjust signedness if mismatched
+        if src_ty != dst_ty:
+            rhs = BitCast(new_type=dst_ty, operand=src_expr)
+        else:
+            rhs = src_expr
+    else:
+        rhs = Trunc(operand=src_expr, new_type=dst_ty)
+
+    dest_ty = dest_var.get_type()
+    if dest_ty is not None and dest_ty != dst_ty:
+        rhs = BitCast(new_type=dest_ty, operand=rhs)
+
+    return Assignment(lhs=dest_var, rhs=rhs)
+
+
 def emit_assignment(
     instr: ptx.Instruction, regmap: Mapping[ptx.Register, Var]
 ) -> Optional[Assignment]:

@@ -19,6 +19,7 @@ from .render_inst import (
     emit_mov,
     emit_mad_lo,
     emit_predicate,
+    emit_cvt,
     emit_inline_asm,
     emit_assignment,
     emit_ld_global,
@@ -138,6 +139,10 @@ class CudaGen:
                 mov = emit_mov(node, self.reg_map)
                 if mov is not None:
                     items.append(mov)
+                    continue
+                cvt = emit_cvt(node, self.reg_map)
+                if cvt is not None:
+                    items.append(cvt)
                     continue
                 pred_assign = emit_predicate(node, self.reg_map)
                 if pred_assign is not None:

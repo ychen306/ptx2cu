@@ -25,6 +25,7 @@ from cudagen.render_inst import (
     emit_mov,
     emit_mad_lo,
     emit_predicate,
+    emit_cvt,
 )
 from ptx import MemoryDecl, MemorySymbol, MemoryType
 
@@ -396,6 +397,42 @@ def test_emit_predicate_setp_u32_immediate():
     cmp = assignment.rhs
     assert isinstance(cmp, Compare)
     assert cmp.opcode == CompareOpcode.ICmpUGE
+
+
+def test_emit_cvt_zeroext():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t64),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="cvt.u64.u32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    assignment = emit_cvt(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert isinstance(assignment.rhs, ZeroExt)
+
+
+def test_emit_cvt_signext():
+    regmap = {
+        ptx.Register(prefix="r", idx=1): Var("r1", t64s),
+        ptx.Register(prefix="r", idx=2): Var("r2", t32s),
+    }
+    instr = ptx.Instruction(
+        predicate=None,
+        opcode="cvt.s64.s32",
+        operands=[
+            ptx.Register(prefix="r", idx=1),
+            ptx.Register(prefix="r", idx=2),
+        ],
+    )
+    assignment = emit_cvt(instr, regmap)
+    assert isinstance(assignment, Assignment)
+    assert isinstance(assignment.rhs, SignExt)
 
 
 def test_emit_ld_global_basic():
