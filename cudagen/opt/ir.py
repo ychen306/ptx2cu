@@ -49,8 +49,6 @@ class OptKernel:
     """Kernel with CFG entry plus metadata matching CudaKernel signature."""
 
     name: str
-    arguments: List[cg_types.MemoryDecl]
+    arguments: List[tuple[cg_types.Var, cg_types.MemoryDecl]]
     var_decls: List[cg_types.Var]
     entry: OptBasicBlock
-import dataclasses import dataclass
-from abc import ABC
